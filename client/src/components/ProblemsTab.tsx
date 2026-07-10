@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
-import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
@@ -150,7 +149,7 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                   <h4>{p.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">
-                  <MarkdownRenderer content={previewDescription(p.description)} />
+                  {previewDescription(p.description)}
                 </div>
               </article>
             ))}

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Solution, Problem, Architecture, Infrastructure } from '../api/client';
-import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface SolutionsTabProps {
@@ -276,7 +275,7 @@ export function SolutionsTab({
                   <h4>{s.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">
-                  <MarkdownRenderer content={previewDescription(s.description)} />
+                  {previewDescription(s.description)}
                 </div>
               </article>
             ))}

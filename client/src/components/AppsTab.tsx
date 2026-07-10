@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { AppPrototype, Problem } from '../api/client';
-import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface AppsTabProps {
@@ -228,7 +227,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                   <h4>{app.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">
-                  <MarkdownRenderer content={previewDescription(app.description)} />
+                  {previewDescription(app.description)}
                 </div>
               </article>
             ))}
