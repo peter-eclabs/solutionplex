@@ -1,6 +1,5 @@
 # Phase 3: Frontend CRUD Implementation Plan
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
+> 
 **Goal:** Implement CRUD screens and cards for Problems, Solutions, Architecture, and Infrastructure. Create reference-linking forms (1:1 problems dropdown, 1:N architectures/infrastructures checklist) and wire search inputs.
 
 **Architecture:** Refinement of the tab layout. Individual tab components handle their own fetch state, mutation state, list renderings, side-by-side creation panel, and reactivity to parent search query props.

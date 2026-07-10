@@ -1,6 +1,5 @@
 # Phase 4: Apps Tab Integration Plan
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
+> 
 **Goal:** Implement the Apps Tab UI in React allowing users to link functional prototypes to problems, lazy-load READMEs via the backend's GitHub API relay, and open live URLs.
 
 **Architecture:** Frontend component makes API requests to the `/api/apps/` router. It supports lazy-loading of README documentation for specific apps to preserve GitHub API rate limits and optimize rendering speeds.
