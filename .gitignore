@@ -1,6 +1,8 @@
 # Python
 server/.venv/
 __pycache__/
+.pytest_cache/
+.pytest_html/
 *.pyc
 .venv/
 
