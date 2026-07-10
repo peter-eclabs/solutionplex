@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import './App.css';
+import { ProblemsTab } from './components/ProblemsTab';
+import { SolutionsTab } from './components/SolutionsTab';
+import { ArchitectureTab } from './components/ArchitectureTab';
+import { InfrastructureTab } from './components/InfrastructureTab';
 
 export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
 
@@ -60,26 +64,22 @@ export function App() {
       <main className="main-content">
         {activeTab === 'problems' && (
           <div className="tab-view">
-            <h2>Problems Section</h2>
-            <p>Pending implementation...</p>
+            <ProblemsTab searchQuery={searchQuery} />
           </div>
         )}
         {activeTab === 'solutions' && (
           <div className="tab-view">
-            <h2>Solutions Section</h2>
-            <p>Pending implementation...</p>
+            <SolutionsTab searchQuery={searchQuery} />
           </div>
         )}
         {activeTab === 'architecture' && (
           <div className="tab-view">
-            <h2>Architecture Section</h2>
-            <p>Pending implementation...</p>
+            <ArchitectureTab searchQuery={searchQuery} />
           </div>
         )}
         {activeTab === 'infrastructure' && (
           <div className="tab-view">
-            <h2>Infrastructure Section</h2>
-            <p>Pending implementation...</p>
+            <InfrastructureTab searchQuery={searchQuery} />
           </div>
         )}
         {activeTab === 'apps' && (
@@ -92,3 +92,4 @@ export function App() {
     </div>
   );
 }
+
