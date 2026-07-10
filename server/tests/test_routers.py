@@ -47,6 +47,46 @@ def test_create_solution_relationship_validation(client, mock_db):
     assert "Associated Problem not found" in res.json()["detail"]
 
 
+def test_create_solution_invalid_architecture(client, mock_db):
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+    )
+    mock_db.architectures.find_one = AsyncMock(return_value=None)
+    res = client.post(
+        "/api/solutions/",
+        json={
+            "title": "Fix locks",
+            "description": "Add connection pooling",
+            "problem_id": "60b8d5a1b55a8b0c848b4567",
+            "architecture_ids": ["60b8d5a1b55a8b0c848b4568"],
+        },
+    )
+    assert res.status_code == 400
+    assert "Associated Architecture not found" in res.json()["detail"]
+
+
+def test_create_solution_invalid_infrastructure(client, mock_db):
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+    )
+    mock_db.architectures.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4568"), "title": "Micro"}
+    )
+    mock_db.infrastructures.find_one = AsyncMock(return_value=None)
+    res = client.post(
+        "/api/solutions/",
+        json={
+            "title": "Fix locks",
+            "description": "Add connection pooling",
+            "problem_id": "60b8d5a1b55a8b0c848b4567",
+            "architecture_ids": ["60b8d5a1b55a8b0c848b4568"],
+            "infrastructure_ids": ["60b8d5a1b55a8b0c848b4569"],
+        },
+    )
+    assert res.status_code == 400
+    assert "Associated Infrastructure not found" in res.json()["detail"]
+
+
 def test_search_scoped_by_tab(client, mock_db):
     mock_problems_cursor = AsyncMock()
     mock_problems_cursor.to_list = AsyncMock(
