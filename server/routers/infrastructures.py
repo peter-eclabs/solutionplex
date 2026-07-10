@@ -97,3 +97,26 @@ async def update_infrastructure(id: str, data: InfrastructureUpdate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         ) from e
+
+
+@router.delete(
+    "/{id}",
+    summary="Delete an Infrastructure card",
+    description="Deletes an Infrastructure card and detaches it from linked Solutions.",
+)
+async def delete_infrastructure(id: str):
+    try:
+        deleted = await service.delete_infrastructure(id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Infrastructure not found"
+            )
+        return {"detail": "Infrastructure deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to delete infrastructure {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

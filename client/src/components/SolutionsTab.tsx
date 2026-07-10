@@ -4,6 +4,7 @@ import type { Solution, Problem, Architecture, Infrastructure } from '../api/cli
 import { MultiSelect } from './MultiSelect';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
+import { DeleteButton } from './DeleteButton';
 
 
 interface SolutionsTabProps {
@@ -232,6 +233,11 @@ export function SolutionsTab({
                   }
                 }}
               >
+                <DeleteButton
+                  entityLabel="Solution"
+                  onDelete={() => api.deleteSolution(s.id)}
+                  onDeleted={loadSolutions}
+                />
                 <div className="card-header">
                   <h4>{s.title}</h4>
                 </div>

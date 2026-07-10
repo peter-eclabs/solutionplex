@@ -86,8 +86,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const errorMsg = await response.text();
     throw new Error(errorMsg || `API request failed with status ${response.status}`);
   }
-  const data: T = await response.json();
-  return data;
+  try {
+    const data: T = await response.json();
+    return data;
+  } catch {
+    throw new Error('Server returned a non-JSON response. Is the API server running?');
+  }
 }
 
 export const api = {
@@ -98,6 +102,8 @@ export const api = {
     request<Problem>('/api/problems/', { method: 'POST', body: JSON.stringify(data) }),
   updateProblem: (id: string, data: { title?: string; description?: string }) =>
     request<Problem>(`/api/problems/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProblem: (id: string) =>
+    request<{ detail: string }>(`/api/problems/${id}`, { method: 'DELETE' }),
 
   // Architecture endpoints
   getArchitectures: (q?: string) => request<Architecture[]>(`/api/architectures/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -106,6 +112,8 @@ export const api = {
     request<Architecture>('/api/architectures/', { method: 'POST', body: JSON.stringify(data) }),
   updateArchitecture: (id: string, data: { title?: string; description?: string }) =>
     request<Architecture>(`/api/architectures/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteArchitecture: (id: string) =>
+    request<{ detail: string }>(`/api/architectures/${id}`, { method: 'DELETE' }),
 
   // Infrastructure endpoints
   getInfrastructures: (q?: string) => request<Infrastructure[]>(`/api/infrastructures/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -114,6 +122,8 @@ export const api = {
     request<Infrastructure>('/api/infrastructures/', { method: 'POST', body: JSON.stringify(data) }),
   updateInfrastructure: (id: string, data: { title?: string; description?: string }) =>
     request<Infrastructure>(`/api/infrastructures/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteInfrastructure: (id: string) =>
+    request<{ detail: string }>(`/api/infrastructures/${id}`, { method: 'DELETE' }),
 
   // Solution endpoints
   getSolutions: (q?: string) => request<Solution[]>(`/api/solutions/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -122,6 +132,8 @@ export const api = {
     request<Solution>('/api/solutions/', { method: 'POST', body: JSON.stringify(data) }),
   updateSolution: (id: string, data: { title?: string; description?: string; problem_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<Solution>(`/api/solutions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSolution: (id: string) =>
+    request<{ detail: string }>(`/api/solutions/${id}`, { method: 'DELETE' }),
 
   // App endpoints
   getApps: (q?: string) => request<AppPrototype[]>(`/api/apps/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -130,5 +142,7 @@ export const api = {
     request<AppPrototype>('/api/apps/', { method: 'POST', body: JSON.stringify(data) }),
   updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; problem_id?: string }) =>
     request<AppPrototype>(`/api/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteApp: (id: string) =>
+    request<{ detail: string }>(`/api/apps/${id}`, { method: 'DELETE' }),
   getReadme: (githubUrl: string) => request<{ readme_content: string }>(`/api/apps/readme?github_url=${encodeURIComponent(githubUrl)}`),
 };

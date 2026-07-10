@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import type { AppPrototype, Problem } from '../api/client';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
+import { DeleteButton } from './DeleteButton';
 
 
 interface AppsTabProps {
@@ -221,6 +222,11 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                   }
                 }}
               >
+                <DeleteButton
+                  entityLabel="App"
+                  onDelete={() => api.deleteApp(app.id)}
+                  onDeleted={loadApps}
+                />
                 <div className="card-header">
                   <h4>{app.title}</h4>
                 </div>

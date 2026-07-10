@@ -260,6 +260,7 @@
   align-items: flex-start;
   margin-bottom: 0.6rem;
   gap: 1rem;
+  padding-right: 2.2rem;
 }
 
 .card-header h4 {
@@ -1649,6 +1650,198 @@
 
 .multi-select-pill-remove:hover {
   color: var(--accent-problem);
+}
+
+/* ==========================================================================
+   Card Delete Button (Bin Icon)
+   ========================================================================== */
+
+.card-delete-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 77, 121, 0.35);
+  background-color: rgba(255, 77, 121, 0.08);
+  color: var(--accent-problem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: var(--transition-fast);
+  z-index: 5;
+  overflow: hidden;
+}
+
+/* Reveal the bin only when the card is hovered, the button is focused, or armed */
+.entity-card:hover .card-delete-btn,
+.card-delete-btn:focus-visible,
+.card-delete-btn.armed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.card-delete-btn:hover {
+  background-color: rgba(255, 77, 121, 0.18);
+  border-color: var(--accent-problem);
+  box-shadow: 0 0 12px rgba(255, 77, 121, 0.35);
+}
+
+.card-delete-btn.armed {
+  border-color: var(--accent-problem);
+  box-shadow: 0 0 16px rgba(255, 77, 121, 0.55);
+}
+
+.card-delete-btn:focus-visible {
+  outline: 2px solid var(--accent-problem);
+  outline-offset: 2px;
+}
+
+.card-delete-icon {
+  position: relative;
+  z-index: 2;
+  transition: transform var(--transition-fast);
+}
+
+.card-delete-btn:hover .card-delete-icon {
+  transform: scale(1.1);
+}
+
+/* Red glow while armed; the red fill itself recedes to show the window */
+.card-delete-btn.armed {
+  border-color: var(--accent-problem);
+  box-shadow: 0 0 16px rgba(255, 77, 121, 0.55);
+}
+
+.card-delete-btn.armed .card-delete-icon {
+  color: #ffffff;
+}
+
+/* Red fill that recedes from right to left across the confirmation window */
+.card-delete-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--accent-problem);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.card-delete-btn.armed .card-delete-fill {
+  animation: deleteFill 1.5s linear forwards;
+}
+
+@keyframes deleteFill {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.card-delete-btn.deleting {
+  animation: deletePulse 0.45s ease;
+}
+
+@keyframes deletePulse {
+  0% { transform: scale(1); }
+  45% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Global Toast Notifications (bottom of viewport)
+   ========================================================================== */
+
+.toast-host {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  z-index: 2000;
+  pointer-events: none;
+  width: max-content;
+  max-width: 90vw;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-grid);
+  color: var(--text-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: toastSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+
+.toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-success {
+  border-color: var(--accent-solution);
+}
+.toast-success .toast-icon {
+  background-color: var(--accent-solution);
+  color: var(--bg-primary);
+  box-shadow: 0 0 10px rgba(0, 245, 155, 0.4);
+}
+
+.toast-error {
+  border-color: var(--accent-problem);
+}
+.toast-error .toast-icon {
+  background-color: var(--accent-problem);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 77, 121, 0.4);
+}
+
+.toast-info {
+  border-color: var(--accent-cyan);
+}
+.toast-info .toast-icon {
+  background-color: var(--accent-cyan);
+  color: var(--bg-primary);
+  box-shadow: 0 0 10px rgba(0, 216, 246, 0.4);
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 

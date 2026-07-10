@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Architecture } from '../api/client';
+import { DeleteButton } from './DeleteButton';
 import './TabStyles.css';
 
 interface ArchitectureTabProps {
@@ -145,6 +146,11 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                   }
                 }}
               >
+                <DeleteButton
+                  entityLabel="Architecture"
+                  onDelete={() => api.deleteArchitecture(a.id)}
+                  onDeleted={loadArchs}
+                />
                 <div className="card-header">
                   <h4>{a.title}</h4>
                 </div>

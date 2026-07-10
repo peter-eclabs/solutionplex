@@ -109,6 +109,13 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
     return await get_app(app_id)
 
 
+async def delete_app(app_id: str) -> bool:
+    if not ObjectId.is_valid(app_id):
+        return False
+    result = await client.apps_col.delete_one({"_id": ObjectId(app_id)})
+    return result.deleted_count > 0
+
+
 def parse_github_url(url: str) -> tuple[str, str]:
     pattern = r"https?://github\.com/([^/]+)/([^/]+)/?.*"
     match = re.match(pattern, url)

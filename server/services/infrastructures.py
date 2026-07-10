@@ -56,3 +56,17 @@ async def update_infrastructure(infra_id: str, data: InfrastructureUpdate) -> Op
     )
     updated = await client.infrastructures_col.find_one({"_id": ObjectId(infra_id)})
     return updated
+
+
+async def delete_infrastructure(infra_id: str) -> bool:
+    if not ObjectId.is_valid(infra_id):
+        return False
+    result = await client.infrastructures_col.delete_one({"_id": ObjectId(infra_id)})
+    if result.deleted_count == 0:
+        return False
+    # Detach this infrastructure from any solutions that reference it
+    await client.solutions_col.update_many(
+        {"infrastructure_ids": ObjectId(infra_id)},
+        {"$pull": {"infrastructure_ids": ObjectId(infra_id)}},
+    )
+    return True

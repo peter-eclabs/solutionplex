@@ -6,6 +6,7 @@ import { ArchitectureTab } from './components/ArchitectureTab';
 import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
 import { DetailView } from './components/DetailView';
+import { ToastProvider } from './components/ToastContext';
 
 export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
 
@@ -72,93 +73,95 @@ export function App() {
   }, [currentPath]);
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <div className="logo-group" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-          <span className="logo-icon">⎔</span>
-          <h1>Solutionplex</h1>
-          <span className="badge">MVP</span>
-        </div>
+    <ToastProvider>
+      <div className="app-container">
+        <header className="app-header">
+          <div className="logo-group" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <span className="logo-icon">⎔</span>
+            <h1>Solutionplex</h1>
+            <span className="badge">MVP</span>
+          </div>
+
+          {!routeInfo && (
+            <div className="search-group">
+              <input
+                type="text"
+                placeholder={`Search ${tabs.find((t) => t.id === activeTab)?.label}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          )}
+        </header>
 
         {!routeInfo && (
-          <div className="search-group">
-            <input
-              type="text"
-              placeholder={`Search ${tabs.find((t) => t.id === activeTab)?.label}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
+          <nav className="tab-navigation">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        )}
+
+        <main className="main-content">
+          {routeInfo ? (
+            <DetailView
+              component={routeInfo.component}
+              id={routeInfo.id}
+              onNavigate={navigate}
             />
-          </div>
-        )}
-      </header>
-
-      {!routeInfo && (
-        <nav className="tab-navigation">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      )}
-
-      <main className="main-content">
-        {routeInfo ? (
-          <DetailView
-            component={routeInfo.component}
-            id={routeInfo.id}
-            onNavigate={navigate}
-          />
-        ) : (
-          <>
-            {activeTab === 'problems' && (
-              <div className="tab-view">
-                <ProblemsTab
-                  searchQuery={searchQuery}
-                  onCardClick={(id) => navigate(`/problems/${id}`)}
-                />
-              </div>
-            )}
-            {activeTab === 'solutions' && (
-              <div className="tab-view">
-                <SolutionsTab
-                  searchQuery={searchQuery}
-                  onCardClick={(id) => navigate(`/solutions/${id}`)}
-                />
-              </div>
-            )}
-            {activeTab === 'architecture' && (
-              <div className="tab-view">
-                <ArchitectureTab
-                  searchQuery={searchQuery}
-                  onCardClick={(id) => navigate(`/architecture/${id}`)}
-                />
-              </div>
-            )}
-            {activeTab === 'infrastructure' && (
-              <div className="tab-view">
-                <InfrastructureTab
-                  searchQuery={searchQuery}
-                  onCardClick={(id) => navigate(`/infrastructure/${id}`)}
-                />
-              </div>
-            )}
-            {activeTab === 'apps' && (
-              <div className="tab-view">
-                <AppsTab
-                  searchQuery={searchQuery}
-                  onCardClick={(id) => navigate(`/apps/${id}`)}
-                />
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+          ) : (
+            <>
+              {activeTab === 'problems' && (
+                <div className="tab-view">
+                  <ProblemsTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/problems/${id}`)}
+                  />
+                </div>
+              )}
+              {activeTab === 'solutions' && (
+                <div className="tab-view">
+                  <SolutionsTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/solutions/${id}`)}
+                  />
+                </div>
+              )}
+              {activeTab === 'architecture' && (
+                <div className="tab-view">
+                  <ArchitectureTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/architecture/${id}`)}
+                  />
+                </div>
+              )}
+              {activeTab === 'infrastructure' && (
+                <div className="tab-view">
+                  <InfrastructureTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/infrastructure/${id}`)}
+                  />
+                </div>
+              )}
+              {activeTab === 'apps' && (
+                <div className="tab-view">
+                  <AppsTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/apps/${id}`)}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </ToastProvider>
   );
 }

@@ -96,3 +96,26 @@ async def update_problem(id: str, data: ProblemUpdate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         ) from e
+
+
+@router.delete(
+    "/{id}",
+    summary="Delete a Problem card",
+    description="Deletes a Problem card and cascades deletion to its linked Solutions.",
+)
+async def delete_problem(id: str):
+    try:
+        deleted = await service.delete_problem(id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+            )
+        return {"detail": "Problem deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to delete problem {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

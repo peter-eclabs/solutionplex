@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Infrastructure } from '../api/client';
+import { DeleteButton } from './DeleteButton';
 import './TabStyles.css';
 
 interface InfrastructureTabProps {
@@ -145,6 +146,11 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                   }
                 }}
               >
+                <DeleteButton
+                  entityLabel="Infrastructure"
+                  onDelete={() => api.deleteInfrastructure(i.id)}
+                  onDeleted={loadInfras}
+                />
                 <div className="card-header">
                   <h4>{i.title}</h4>
                 </div>

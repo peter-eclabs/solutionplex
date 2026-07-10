@@ -171,3 +171,10 @@ async def update_solution(solution_id: str, data: SolutionUpdate) -> Optional[di
         {"_id": ObjectId(solution_id)}, {"$set": update_fields}
     )
     return await get_solution(solution_id)
+
+
+async def delete_solution(solution_id: str) -> bool:
+    if not ObjectId.is_valid(solution_id):
+        return False
+    result = await client.solutions_col.delete_one({"_id": ObjectId(solution_id)})
+    return result.deleted_count > 0

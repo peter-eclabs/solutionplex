@@ -127,3 +127,26 @@ async def update_app(id: str, data: AppUpdate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         ) from e
+
+
+@router.delete(
+    "/{id}",
+    summary="Delete an App card",
+    description="Deletes an App prototype card.",
+)
+async def delete_app(id: str):
+    try:
+        deleted = await service.delete_app(id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="App not found"
+            )
+        return {"detail": "App deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to delete app {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

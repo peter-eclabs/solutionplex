@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
+import { DeleteButton } from './DeleteButton';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
@@ -145,6 +146,12 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                   }
                 }}
               >
+                <DeleteButton
+                  entityLabel="Problem"
+                  onDelete={() => api.deleteProblem(p.id)}
+                  onDeleted={loadProblems}
+                />
+
                 <div className="card-header">
                   <h4>{p.title}</h4>
                 </div>

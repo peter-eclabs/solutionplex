@@ -73,3 +73,14 @@ async def update_problem(problem_id: str, data: ProblemUpdate) -> Optional[dict]
         {"_id": ObjectId(problem_id)}, {"$set": update_fields}
     )
     return await get_problem(problem_id)
+
+
+async def delete_problem(problem_id: str) -> bool:
+    if not ObjectId.is_valid(problem_id):
+        return False
+    result = await client.problems_col.delete_one({"_id": ObjectId(problem_id)})
+    if result.deleted_count == 0:
+        return False
+    # Cascade: remove solutions bound to this problem (1:1 / 1:N relationship)
+    await client.solutions_col.delete_many({"problem_id": ObjectId(problem_id)})
+    return True

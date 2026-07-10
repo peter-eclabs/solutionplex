@@ -97,3 +97,26 @@ async def update_architecture(id: str, data: ArchitectureUpdate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         ) from e
+
+
+@router.delete(
+    "/{id}",
+    summary="Delete an Architecture card",
+    description="Deletes an Architecture card and detaches it from linked Solutions.",
+)
+async def delete_architecture(id: str):
+    try:
+        deleted = await service.delete_architecture(id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Architecture not found"
+            )
+        return {"detail": "Architecture deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to delete architecture {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e

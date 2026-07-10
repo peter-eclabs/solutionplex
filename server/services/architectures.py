@@ -55,3 +55,17 @@ async def update_architecture(arch_id: str, data: ArchitectureUpdate) -> Optiona
     )
     updated = await client.architectures_col.find_one({"_id": ObjectId(arch_id)})
     return updated
+
+
+async def delete_architecture(arch_id: str) -> bool:
+    if not ObjectId.is_valid(arch_id):
+        return False
+    result = await client.architectures_col.delete_one({"_id": ObjectId(arch_id)})
+    if result.deleted_count == 0:
+        return False
+    # Detach this architecture from any solutions that reference it
+    await client.solutions_col.update_many(
+        {"architecture_ids": ObjectId(arch_id)},
+        {"$pull": {"architecture_ids": ObjectId(arch_id)}},
+    )
+    return True
