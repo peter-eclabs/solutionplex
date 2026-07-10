@@ -318,3 +318,37 @@ def test_list_apps_success(client, mock_db):
     assert data[0]["problem"]["title"] == "DB Lock"
 
 
+def test_get_app_success(client, mock_db):
+    from datetime import datetime
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": ObjectId("60b8d5a1b55a8b0c848b4580"),
+            "title": "Cache Monitor Admin",
+            "description": "Core features...",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": "https://myprototype.vercel.app",
+            "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+    )
+
+    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["title"] == "Cache Monitor Admin"
+    assert data["github_url"] == "https://github.com/owner/repo"
+    assert data["problem"]["title"] == "DB Lock"
+
+
+def test_get_app_not_found(client, mock_db):
+    mock_db.apps.find_one = AsyncMock(return_value=None)
+    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "App not found"
+
+
+

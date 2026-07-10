@@ -619,15 +619,10 @@
 
 .detail-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
+  max-width: 960px;
+  margin: 0 auto;
   gap: 2rem;
-  align-items: flex-start;
-}
-
-@media (max-width: 992px) {
-  .detail-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .detail-main-card {
@@ -984,3 +979,331 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   Plex Visualizer Graph Section Styling
+   ========================================================================== */
+
+.card-visualizer-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--border-grid);
+  position: relative;
+  width: 100%;
+}
+
+.visualizer-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.visualizer-section-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.plex-visualizer-container {
+  width: 100%;
+  position: relative;
+}
+
+.plex-graph-viewport {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: radial-gradient(circle at center, rgba(18, 24, 45, 0.4) 0%, rgba(6, 8, 20, 0.7) 100%);
+  border: 1px solid var(--border-grid);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.plex-graph-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.plex-node-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(18, 24, 45, 0.85);
+  border: 1px solid var(--border-grid);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: var(--transition-smooth);
+  user-select: none;
+  backdrop-filter: blur(10px);
+  z-index: 5;
+}
+
+.plex-node-card:hover {
+  transform: scale(1.04) translateY(-3px);
+  background: rgba(27, 42, 74, 0.9);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.plex-node-card.plex-node-parent {
+  cursor: default;
+}
+
+.plex-node-card.plex-node-parent:hover {
+  transform: none;
+  background: rgba(18, 24, 45, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Border highlighting based on node type in visualizer */
+.plex-node-card.plex-node-problem {
+  border-color: rgba(255, 77, 121, 0.3);
+}
+.plex-node-card.plex-node-problem:hover,
+.plex-node-card.plex-node-problem.plex-node-parent {
+  border-color: var(--accent-problem);
+  box-shadow: 0 0 12px rgba(255, 77, 121, 0.2);
+}
+
+.plex-node-card.plex-node-solution {
+  border-color: rgba(0, 245, 155, 0.3);
+}
+.plex-node-card.plex-node-solution:hover,
+.plex-node-card.plex-node-solution.plex-node-parent {
+  border-color: var(--accent-solution);
+  box-shadow: 0 0 12px rgba(0, 245, 155, 0.2);
+}
+
+.plex-node-card.plex-node-architecture {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+.plex-node-card.plex-node-architecture:hover {
+  border-color: var(--accent-arch);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+}
+
+.plex-node-card.plex-node-infrastructure {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.plex-node-card.plex-node-infrastructure:hover {
+  border-color: var(--accent-infra);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.plex-node-card.plex-node-app {
+  border-color: rgba(0, 216, 246, 0.3);
+}
+.plex-node-card.plex-node-app:hover,
+.plex-node-card.plex-node-app.plex-node-parent {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 216, 246, 0.2);
+}
+
+/* Node icon wrapper styling */
+.plex-node-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+.plex-node-icon-wrapper.bg-problem {
+  background-color: var(--accent-problem);
+  box-shadow: 0 0 8px rgba(255, 77, 121, 0.4);
+}
+
+.plex-node-icon-wrapper.bg-solution {
+  background-color: var(--accent-solution);
+  box-shadow: 0 0 8px rgba(0, 245, 155, 0.4);
+  color: var(--bg-primary);
+}
+
+.plex-node-icon-wrapper.bg-architecture {
+  background-color: var(--accent-arch);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+.plex-node-icon-wrapper.bg-infrastructure {
+  background-color: var(--accent-infra);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.plex-node-icon-wrapper.bg-app {
+  background-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 216, 246, 0.4);
+  color: var(--bg-primary);
+}
+
+.node-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5px;
+}
+
+/* Node details and labels */
+.plex-node-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-align: left;
+}
+
+.plex-node-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.1rem;
+  line-height: 1;
+}
+
+.plex-node-problem .plex-node-label { color: var(--accent-problem); }
+.plex-node-solution .plex-node-label { color: var(--accent-solution); }
+.plex-node-architecture .plex-node-label { color: var(--accent-arch); }
+.plex-node-infrastructure .plex-node-label { color: var(--accent-infra); }
+.plex-node-app .plex-node-label { color: var(--accent-cyan); }
+
+.plex-node-title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Curved Bezier links */
+.plex-link-path {
+  fill: none;
+  stroke-width: 2px;
+  opacity: 0.35;
+  transition: var(--transition-smooth);
+}
+
+.plex-link-path:hover {
+  stroke-width: 3.5px;
+  opacity: 0.85;
+  filter: url(#plex-glow);
+}
+
+/* Floating overlay panels styling */
+.plex-floating-panel {
+  position: absolute;
+  background: rgba(18, 24, 45, 0.95);
+  border: 1px solid var(--border-grid);
+  border-radius: 8px;
+  width: 250px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(15px);
+  z-index: 100;
+  overflow: hidden;
+  animation: plexFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes plexFadeIn {
+  from { opacity: 0; transform: scale(0.95) translateY(5px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.plex-floating-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border-grid);
+  background: rgba(6, 8, 20, 0.4);
+}
+
+.plex-floating-header span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.plex-floating-header button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.plex-floating-header button:hover {
+  color: var(--text-primary);
+}
+
+.plex-floating-list {
+  list-style: none;
+  padding: 0.4rem;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.plex-floating-list li {
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: var(--transition-smooth);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.plex-floating-list li:hover {
+  background: rgba(27, 42, 74, 0.5);
+  color: var(--text-primary);
+  padding-left: 0.75rem;
+}
+
+.plex-floating-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+.list-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.list-item-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

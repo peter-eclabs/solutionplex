@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
+import { PlexVisualizer } from './PlexVisualizer';
 import './TabStyles.css';
 
 interface DetailViewProps {
@@ -64,6 +65,17 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     setLoading(true);
     setError('');
     setIsEditing(false);
+    
+    // Clear previous node states to prevent stale leakage
+    setProblemData(null);
+    setSolutionData(null);
+    setArchData(null);
+    setInfraData(null);
+    setAppData(null);
+    setReadme('');
+    setRelatedSolutions([]);
+    setRelatedApps([]);
+
     try {
       if (component === 'problems') {
         const data = await api.getProblem(id);
@@ -196,25 +208,30 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   };
 
   const getEntityTitle = () => {
-    if (problemData) return problemData.title;
-    if (solutionData) return solutionData.title;
-    if (archData) return archData.title;
-    if (infraData) return infraData.title;
-    if (appData) return appData.title;
+    if (component === 'problems' && problemData) return problemData.title;
+    if (component === 'solutions' && solutionData) return solutionData.title;
+    if (component === 'architecture' && archData) return archData.title;
+    if (component === 'infrastructure' && infraData) return infraData.title;
+    if (component === 'apps' && appData) return appData.title;
     return 'Entity Details';
   };
 
   const getEntityDescription = () => {
-    if (problemData) return problemData.description;
-    if (solutionData) return solutionData.description;
-    if (archData) return archData.description;
-    if (infraData) return infraData.description;
-    if (appData) return appData.description;
+    if (component === 'problems' && problemData) return problemData.description;
+    if (component === 'solutions' && solutionData) return solutionData.description;
+    if (component === 'architecture' && archData) return archData.description;
+    if (component === 'infrastructure' && infraData) return infraData.description;
+    if (component === 'apps' && appData) return appData.description;
     return '';
   };
 
   const getEntityTimestamp = () => {
-    const d = problemData || solutionData || archData || infraData || appData;
+    let d: Problem | Solution | Architecture | Infrastructure | AppPrototype | null = null;
+    if (component === 'problems') d = problemData;
+    else if (component === 'solutions') d = solutionData;
+    else if (component === 'architecture') d = archData;
+    else if (component === 'infrastructure') d = infraData;
+    else if (component === 'apps') d = appData;
     if (!d) return '';
     return new Date(d.created_at).toLocaleString();
   };
@@ -418,6 +435,61 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               <div className="viewer-body">
                 <p className="description-body">{getEntityDescription()}</p>
 
+                {/* Plex Visualizer Graph Section */}
+                {component === 'problems' && problemData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="problems"
+                      data={problemData}
+                      relatedApps={relatedApps}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+                {component === 'solutions' && solutionData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="solutions"
+                      data={solutionData}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+                {component === 'architecture' && archData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="architecture"
+                      data={archData}
+                      relatedSolutions={relatedSolutions}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+                {component === 'infrastructure' && infraData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="infrastructure"
+                      data={infraData}
+                      relatedSolutions={relatedSolutions}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+                {component === 'apps' && appData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="apps"
+                      data={appData}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+
                 {component === 'apps' && appData && (
                   <div className="app-links-group">
                     <a
@@ -465,166 +537,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           )}
         </div>
 
-        {/* Relations Sidebar ("The Plex") */}
-        <div className="detail-relations-sidebar">
-          <h3>The Plex Relationships</h3>
-          <div className="relations-list-wrapper">
-            {/* Outgoing relationships depending on the component */}
-            {problemData && (
-              <div className="relation-category-block">
-                <h4>Proposed Solutions</h4>
-                {problemData.solutions.length === 0 ? (
-                  <p className="empty-rel-text">No solutions proposed for this problem yet.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {problemData.solutions.map((s) => (
-                      <div
-                        key={s.id}
-                        onClick={() => onNavigate(`/solutions/${s.id}`)}
-                        className="rel-mini-card solution-border"
-                      >
-                        <h5>{s.title}</h5>
-                        <span>View Solution Node →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                <h4 style={{ marginTop: '1.5rem' }}>Associated App Prototypes</h4>
-                {relatedApps.length === 0 ? (
-                  <p className="empty-rel-text">No functional apps linked to this problem yet.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {relatedApps.map((app) => (
-                      <div
-                        key={app.id}
-                        onClick={() => onNavigate(`/apps/${app.id}`)}
-                        className="rel-mini-card app-border"
-                      >
-                        <h5>{app.title}</h5>
-                        <span>View App Node →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {solutionData && (
-              <div className="relation-category-block">
-                <h4>Addresses Problem Statement</h4>
-                {solutionData.problem ? (
-                  <div
-                    onClick={() => onNavigate(`/problems/${solutionData.problem!.id}`)}
-                    className="rel-mini-card problem-border"
-                  >
-                    <h5>{solutionData.problem.title}</h5>
-                    <span>View Problem Statement →</span>
-                  </div>
-                ) : (
-                  <p className="empty-rel-text">No problem statement targeted.</p>
-                )}
-
-                <h4 style={{ marginTop: '1.5rem' }}>Architectural Pattern Stacks</h4>
-                {solutionData.architectures.length === 0 ? (
-                  <p className="empty-rel-text">No architectural designs linked to this solution.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {solutionData.architectures.map((a) => (
-                      <div
-                        key={a.id}
-                        onClick={() => onNavigate(`/architecture/${a.id}`)}
-                        className="rel-mini-card arch-border"
-                      >
-                        <h5>{a.title}</h5>
-                        <span>View Architectural Pattern →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <h4 style={{ marginTop: '1.5rem' }}>Infrastructure Infrastructure Stacks</h4>
-                {solutionData.infrastructures.length === 0 ? (
-                  <p className="empty-rel-text">No infrastructure stacks deployed with this solution.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {solutionData.infrastructures.map((i) => (
-                      <div
-                        key={i.id}
-                        onClick={() => onNavigate(`/infrastructure/${i.id}`)}
-                        className="rel-mini-card infra-border"
-                      >
-                        <h5>{i.title}</h5>
-                        <span>View Infrastructure Stack →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {archData && (
-              <div className="relation-category-block">
-                <h4>Solutions Implementing Pattern</h4>
-                {relatedSolutions.length === 0 ? (
-                  <p className="empty-rel-text">No active solution cards are deploying this architecture pattern.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {relatedSolutions.map((s) => (
-                      <div
-                        key={s.id}
-                        onClick={() => onNavigate(`/solutions/${s.id}`)}
-                        className="rel-mini-card solution-border"
-                      >
-                        <h5>{s.title}</h5>
-                        <span>View Solution Node →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {infraData && (
-              <div className="relation-category-block">
-                <h4>Solutions Deploying Stack</h4>
-                {relatedSolutions.length === 0 ? (
-                  <p className="empty-rel-text">No active solution cards are deploying this infrastructure stack.</p>
-                ) : (
-                  <div className="rel-cards-list">
-                    {relatedSolutions.map((s) => (
-                      <div
-                        key={s.id}
-                        onClick={() => onNavigate(`/solutions/${s.id}`)}
-                        className="rel-mini-card solution-border"
-                      >
-                        <h5>{s.title}</h5>
-                        <span>View Solution Node →</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {appData && (
-              <div className="relation-category-block">
-                <h4>Resolves Problem Statement</h4>
-                {appData.problem ? (
-                  <div
-                    onClick={() => onNavigate(`/problems/${appData.problem!.id}`)}
-                    className="rel-mini-card problem-border"
-                  >
-                    <h5>{appData.problem.title}</h5>
-                    <span>View Problem Statement →</span>
-                  </div>
-                ) : (
-                  <p className="empty-rel-text">No problem statement targeted.</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

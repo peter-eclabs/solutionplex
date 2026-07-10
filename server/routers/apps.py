@@ -77,6 +77,30 @@ async def fetch_readme(github_url: str):
         ) from e
 
 
+@router.get(
+    "/{id}",
+    response_model=AppResponse,
+    summary="Get App details",
+    description="Retrieves detail view for a specific App card.",
+)
+async def get_app(id: str):
+    try:
+        doc = await service.get_app(id)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="App not found"
+            )
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to retrieve app {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
 @router.put(
     "/{id}",
     response_model=AppResponse,
