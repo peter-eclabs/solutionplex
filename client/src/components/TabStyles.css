@@ -1978,4 +1978,155 @@
   color: var(--accent-problem);
 }
 
+/* Toggle Switch Styles */
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.toggle-switch-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-grid);
+  transition: .3s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: rgba(0, 242, 254, 0.1);
+  border-color: var(--accent-cyan);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+  background-color: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.solution-prototypes-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-grid);
+  cursor: default;
+}
+
+.solution-prototypes-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-cyan);
+}
+
+.solution-prototypes-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.solution-prototype-item {
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.prototype-remove-trigger {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border-grid);
+  color: var(--text-muted);
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 0.7rem;
+  transition: var(--transition-smooth);
+}
+
+.prototype-remove-trigger:hover {
+  border-color: var(--accent-problem);
+  color: var(--accent-problem);
+}
+
+.prototype-remove-menu {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: flex;
+  gap: 0.35rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-grid);
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
+.prototype-unlink-btn,
+.prototype-delete-btn,
+.prototype-cancel-btn {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+  border: 1px solid var(--border-grid);
+  background: transparent;
+}
+
+.prototype-unlink-btn {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+.prototype-delete-btn {
+  color: var(--accent-problem);
+  border-color: var(--accent-problem);
+}
+
+.prototype-cancel-btn {
+  color: var(--text-muted);
+}
+
 
