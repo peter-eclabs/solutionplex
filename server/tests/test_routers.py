@@ -230,6 +230,9 @@ def test_fetch_readme_api_error(client, monkeypatch):
 
 def test_create_app_success(client, mock_db):
     from datetime import datetime
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
+    )
     mock_db.problems.find_one = AsyncMock(
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
@@ -247,7 +250,7 @@ def test_create_app_success(client, mock_db):
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+            "solution_id": ObjectId("60b8d5a1b55a8b0c848b4570"),
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -260,7 +263,7 @@ def test_create_app_success(client, mock_db):
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "problem_id": "60b8d5a1b55a8b0c848b4567",
+            "solution_id": "60b8d5a1b55a8b0c848b4570",
         },
     )
     assert res.status_code == 201
@@ -268,12 +271,13 @@ def test_create_app_success(client, mock_db):
     assert data["title"] == "Cache Monitor Admin"
     assert data["github_url"] == "https://github.com/owner/repo"
     assert data["live_url"] == "https://myprototype.vercel.app"
+    assert data["solution"]["title"] == "Fix locks"
     assert data["problem"]["title"] == "DB Lock"
 
 
-def test_create_app_invalid_problem(client, mock_db):
-    # If problem is not found, return 400
-    mock_db.problems.find_one = AsyncMock(return_value=None)
+def test_create_app_invalid_solution(client, mock_db):
+    # If solution is not found, return 400
+    mock_db.solutions.find_one = AsyncMock(return_value=None)
     res = client.post(
         "/api/apps/",
         json={
@@ -281,11 +285,11 @@ def test_create_app_invalid_problem(client, mock_db):
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "problem_id": "60b8d5a1b55a8b0c848b4567",
+            "solution_id": "60b8d5a1b55a8b0c848b4570",
         },
     )
     assert res.status_code == 400
-    assert "Associated Problem not found" in res.json()["detail"]
+    assert "Associated Solution not found" in res.json()["detail"]
 
 
 def test_list_apps_success(client, mock_db):
@@ -299,13 +303,16 @@ def test_list_apps_success(client, mock_db):
                 "description": "Core features...",
                 "github_url": "https://github.com/owner/repo",
                 "live_url": "https://myprototype.vercel.app",
-                "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+                "solution_id": ObjectId("60b8d5a1b55a8b0c848b4570"),
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
             }
         ]
     )
     mock_db.apps.find = MagicMock(return_value=mock_apps_cursor)
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
+    )
     mock_db.problems.find_one = AsyncMock(
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
@@ -315,6 +322,7 @@ def test_list_apps_success(client, mock_db):
     data = res.json()
     assert len(data) == 1
     assert data[0]["title"] == "Cache Monitor Admin"
+    assert data[0]["solution"]["title"] == "Fix locks"
     assert data[0]["problem"]["title"] == "DB Lock"
 
 
@@ -327,10 +335,13 @@ def test_get_app_success(client, mock_db):
             "description": "Core features...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+            "solution_id": ObjectId("60b8d5a1b55a8b0c848b4570"),
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
+    )
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
     )
     mock_db.problems.find_one = AsyncMock(
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
@@ -341,6 +352,7 @@ def test_get_app_success(client, mock_db):
     data = res.json()
     assert data["title"] == "Cache Monitor Admin"
     assert data["github_url"] == "https://github.com/owner/repo"
+    assert data["solution"]["title"] == "Fix locks"
     assert data["problem"]["title"] == "DB Lock"
 
 
@@ -399,11 +411,9 @@ def test_problem_solution_app_relationship(client, mock_db):
     assert data_sol["apps"][0]["title"] == "Cache Monitor Admin"
 
     # Now verify get_app resolves solution
-    mock_sols_cursor = AsyncMock()
-    mock_sols_cursor.to_list = AsyncMock(
-        return_value=[{"_id": solution_id, "title": "Fix locks"}]
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={"_id": solution_id, "title": "Fix locks", "problem_id": problem_id}
     )
-    mock_db.solutions.find = MagicMock(return_value=mock_sols_cursor)
 
     # Set up app mock find_one
     mock_db.apps.find_one = AsyncMock(
@@ -413,7 +423,7 @@ def test_problem_solution_app_relationship(client, mock_db):
             "description": "Core features...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "problem_id": problem_id,
+            "solution_id": solution_id,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -423,8 +433,8 @@ def test_problem_solution_app_relationship(client, mock_db):
     res_app = client.get(f"/api/apps/{app_id}")
     assert res_app.status_code == 200
     data_app = res_app.json()
-    assert data_app["solutions"][0]["id"] == str(solution_id)
-    assert data_app["solutions"][0]["title"] == "Fix locks"
+    assert data_app["solution"]["id"] == str(solution_id)
+    assert data_app["solution"]["title"] == "Fix locks"
 
 
 

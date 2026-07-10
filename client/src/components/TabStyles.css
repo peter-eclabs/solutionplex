@@ -1680,6 +1680,7 @@
 
 /* Reveal the bin only when the card is hovered, the button is focused, or armed */
 .entity-card:hover .card-delete-btn,
+.problem-solution-item:hover .card-delete-btn,
 .card-delete-btn:focus-visible,
 .card-delete-btn.armed {
   opacity: 1;
@@ -1842,6 +1843,139 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* Problem Solutions embedded section */
+.problem-solutions-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-grid);
+  cursor: default;
+}
+
+.problem-solutions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.problem-solutions-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-solution);
+}
+
+.propose-solution-btn {
+  background-color: transparent;
+  border: 1px solid var(--accent-solution);
+  color: var(--accent-solution);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.propose-solution-btn:hover {
+  background-color: var(--accent-solution);
+  color: var(--bg-primary);
+}
+
+.problem-solutions-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.problem-solutions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.problem-solution-item {
+  position: relative;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-grid);
+  border-left: 3px solid var(--accent-solution);
+  padding: 0.6rem 0.75rem;
+  transition: var(--transition-smooth);
+}
+
+.problem-solution-item:hover {
+  border-color: var(--accent-solution);
+}
+
+.problem-solution-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.problem-solution-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.problem-solution-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.problem-solution-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.solution-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border-grid);
+}
+
+.tag-arch {
+  color: var(--accent-arch);
+  border-color: var(--accent-arch);
+}
+
+.tag-infra {
+  color: var(--accent-infra);
+  border-color: var(--accent-infra);
+}
+
+.form-context-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: -0.25rem 0 0.75rem;
+}
+
+.form-context-note strong {
+  color: var(--accent-problem);
 }
 
 

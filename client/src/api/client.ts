@@ -68,6 +68,7 @@ export interface AppPrototype {
   live_url?: string;
   problem: ProblemShort | null;
   solutions: SolutionShort[];
+  solution: SolutionShort | null;
   created_at: string;
   updated_at: string;
 }
@@ -138,11 +139,11 @@ export const api = {
   // App endpoints
   getApps: (q?: string) => request<AppPrototype[]>(`/api/apps/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getApp: (id: string) => request<AppPrototype>(`/api/apps/${id}`),
-  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; problem_id: string }) =>
+  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; solution_id?: string }) =>
     request<AppPrototype>('/api/apps/', { method: 'POST', body: JSON.stringify(data) }),
-  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; problem_id?: string }) =>
+  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; solution_id?: string }) =>
     request<AppPrototype>(`/api/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteApp: (id: string) =>
     request<{ detail: string }>(`/api/apps/${id}`, { method: 'DELETE' }),
   getReadme: (githubUrl: string) => request<{ readme_content: string }>(`/api/apps/readme?github_url=${encodeURIComponent(githubUrl)}`),
-};
+};;

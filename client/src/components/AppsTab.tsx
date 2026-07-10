@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
-import type { AppPrototype, Problem } from '../api/client';
+import type { AppPrototype, Solution } from '../api/client';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
 import { DeleteButton } from './DeleteButton';
@@ -13,13 +13,13 @@ interface AppsTabProps {
 
 export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
   const [apps, setApps] = useState<AppPrototype[]>([]);
-  const [problems, setProblems] = useState<Problem[]>([]);
+  const [solutions, setSolutions] = useState<Solution[]>([]);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
-  const [selectedProblemId, setSelectedProblemId] = useState('');
+  const [selectedSolutionId, setSelectedSolutionId] = useState('');
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,15 +28,15 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
-  const loadProblems = useCallback(async () => {
+  const loadSolutions = useCallback(async () => {
     try {
-      const pData = await api.getProblems();
-      setProblems(pData);
+      const sData = await api.getSolutions();
+      setSolutions(sData);
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(`Failed to populate problems: ${err.message}`);
+        setError(`Failed to populate solutions: ${err.message}`);
       } else {
-        setError('Failed to populate problems dropdown');
+        setError('Failed to populate solutions dropdown');
       }
     }
   }, []);
@@ -59,8 +59,8 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
   }, [searchQuery]);
 
   useEffect(() => {
-    loadProblems();
-  }, [loadProblems]);
+    loadSolutions();
+  }, [loadSolutions]);
 
   useEffect(() => {
     loadApps();
@@ -68,8 +68,8 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim() || !githubUrl.trim() || !selectedProblemId) {
-      setError('Title, Description, GitHub URL, and Problem Target are required fields.');
+    if (!title.trim() || !description.trim() || !githubUrl.trim()) {
+      setError('Title, Description, and GitHub URL are required fields.');
       return;
     }
     try {
@@ -78,13 +78,13 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
         description: description.trim(),
         github_url: githubUrl.trim(),
         live_url: liveUrl.trim() || undefined,
-        problem_id: selectedProblemId,
+        solution_id: selectedSolutionId || undefined,
       });
       setTitle('');
       setDescription('');
       setGithubUrl('');
       setLiveUrl('');
-      setSelectedProblemId('');
+      setSelectedSolutionId('');
       setError('');
       setIsFormOpen(false);
       loadApps();
@@ -139,13 +139,13 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="app-problem">Problem Statement (1:1)</label>
+                  <label htmlFor="app-solution">Associated Solution (Optional)</label>
                   <CustomSelect
-                    id="app-problem"
-                    value={selectedProblemId}
-                    onChange={setSelectedProblemId}
-                    options={problems.map((p) => ({ value: p.id, label: p.title }))}
-                    placeholder="-- Select Problem Target --"
+                    id="app-solution"
+                    value={selectedSolutionId}
+                    onChange={setSelectedSolutionId}
+                    options={solutions.map((s) => ({ value: s.id, label: s.title }))}
+                    placeholder="-- Select Solution Target --"
                   />
                 </div>
 
@@ -175,7 +175,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                 <button
                   type="submit"
                   className="submit-btn"
-                  disabled={!title.trim() || !description.trim() || !githubUrl.trim() || !selectedProblemId}
+                  disabled={!title.trim() || !description.trim() || !githubUrl.trim()}
                 >
                   Create App Card
                 </button>

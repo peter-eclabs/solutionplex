@@ -163,7 +163,7 @@ class AppCreate(BaseModel):
     description: str = Field(..., min_length=1)
     github_url: str = Field(..., min_length=1)
     live_url: Optional[str] = None
-    problem_id: str
+    solution_id: Optional[str] = None
 
 
 class AppUpdate(BaseModel):
@@ -171,7 +171,7 @@ class AppUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1)
     github_url: Optional[str] = Field(None, min_length=1)
     live_url: Optional[str] = None
-    problem_id: Optional[str] = None
+    solution_id: Optional[str] = None
 
 
 class AppResponse(BaseModel):
@@ -182,6 +182,7 @@ class AppResponse(BaseModel):
     live_url: Optional[str] = None
     problem: Optional[ProblemShort] = None
     solutions: List[SolutionShort] = []
+    solution: Optional[SolutionShort] = None
     created_at: datetime
     updated_at: datetime
 

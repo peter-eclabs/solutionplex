@@ -80,8 +80,8 @@ async def populate_solution(s: dict) -> dict:
         {"id": str(i["_id"]), "title": i["title"]} for i in infras
     ]
 
-    # Resolve apps sharing the same problem
-    app_cursor = client.apps_col.find({"problem_id": s["problem_id"]})
+    # Resolve apps referencing this solution
+    app_cursor = client.apps_col.find({"solution_id": s["_id"]})
     apps = await app_cursor.to_list(length=100)
     s["apps"] = [
         {"id": str(a["_id"]), "title": a["title"]} for a in apps
@@ -177,4 +177,10 @@ async def delete_solution(solution_id: str) -> bool:
     if not ObjectId.is_valid(solution_id):
         return False
     result = await client.solutions_col.delete_one({"_id": ObjectId(solution_id)})
-    return result.deleted_count > 0
+    if result.deleted_count > 0:
+        await client.apps_col.update_many(
+            {"solution_id": ObjectId(solution_id)},
+            {"$set": {"solution_id": None}}
+        )
+        return True
+    return False

@@ -14,20 +14,23 @@ logger = logging.getLogger(__name__)
 
 
 async def create_app(data: AppCreate) -> dict:
-    if not ObjectId.is_valid(data.problem_id):
-        raise ValueError("Invalid problem_id")
-    problem_exists = await client.problems_col.find_one(
-        {"_id": ObjectId(data.problem_id)}
-    )
-    if not problem_exists:
-        raise ValueError("Associated Problem not found")
+    sol_object_id = None
+    if data.solution_id:
+        if not ObjectId.is_valid(data.solution_id):
+            raise ValueError("Invalid solution_id")
+        sol_exists = await client.solutions_col.find_one(
+            {"_id": ObjectId(data.solution_id)}
+        )
+        if not sol_exists:
+            raise ValueError("Associated Solution not found")
+        sol_object_id = ObjectId(data.solution_id)
 
     doc = {
         "title": data.title,
         "description": data.description,
         "github_url": data.github_url,
         "live_url": data.live_url,
-        "problem_id": ObjectId(data.problem_id),
+        "solution_id": sol_object_id,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -37,17 +40,26 @@ async def create_app(data: AppCreate) -> dict:
 
 
 async def populate_app(a: dict) -> dict:
-    prob = await client.problems_col.find_one({"_id": a["problem_id"]})
-    a["problem"] = (
-        {"id": str(prob["_id"]), "title": prob["title"]} if prob else None
-    )
+    sol_id = a.get("solution_id")
+    if sol_id:
+        sol = await client.solutions_col.find_one({"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id})
+        if sol:
+            a["solution"] = {"id": str(sol["_id"]), "title": sol["title"]}
+            prob = await client.problems_col.find_one({"_id": sol["problem_id"]})
+            a["problem"] = (
+                {"id": str(prob["_id"]), "title": prob["title"]} if prob else None
+            )
+        else:
+            a["solution"] = None
+            a["problem"] = None
+    else:
+        a["solution"] = None
+        a["problem"] = None
 
-    # Resolve solutions sharing the same problem
-    sol_cursor = client.solutions_col.find({"problem_id": a["problem_id"]})
-    sols = await sol_cursor.to_list(length=100)
-    a["solutions"] = [
-        {"id": str(s["_id"]), "title": s["title"]} for s in sols
-    ]
+    if a["solution"]:
+        a["solutions"] = [a["solution"]]
+    else:
+        a["solutions"] = []
     return a
 
 
@@ -86,18 +98,22 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
         return None
 
     update_fields = {
-        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None or k == "solution_id"
     }
 
-    if "problem_id" in update_fields:
-        if not ObjectId.is_valid(update_fields["problem_id"]):
-            raise ValueError("Invalid problem_id")
-        prob = await client.problems_col.find_one(
-            {"_id": ObjectId(update_fields["problem_id"])}
-        )
-        if not prob:
-            raise ValueError("Associated Problem not found")
-        update_fields["problem_id"] = ObjectId(update_fields["problem_id"])
+    if "solution_id" in update_fields:
+        s_id = update_fields["solution_id"]
+        if s_id:
+            if not ObjectId.is_valid(s_id):
+                raise ValueError("Invalid solution_id")
+            sol = await client.solutions_col.find_one(
+                {"_id": ObjectId(s_id)}
+            )
+            if not sol:
+                raise ValueError("Associated Solution not found")
+            update_fields["solution_id"] = ObjectId(s_id)
+        else:
+            update_fields["solution_id"] = None
 
     if not update_fields:
         return await get_app(app_id)

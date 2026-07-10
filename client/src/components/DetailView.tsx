@@ -5,6 +5,7 @@ import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
+import { ProblemSolutions } from './ProblemSolutions';
 
 
 interface DetailViewProps {
@@ -32,6 +33,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   // Reciprocal Plex relations
   const [relatedSolutions, setRelatedSolutions] = useState<Solution[]>([]);
   const [relatedApps, setRelatedApps] = useState<AppPrototype[]>([]);
+  const [problemSolutions, setProblemSolutions] = useState<Solution[]>([]);
 
   // Editing states (common)
   const [editTitle, setEditTitle] = useState('');
@@ -39,6 +41,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
 
   // Editing states (specialized)
   const [editProblemId, setEditProblemId] = useState('');
+  const [editSolutionId, setEditSolutionId] = useState('');
   const [editArchIds, setEditArchIds] = useState<string[]>([]);
   const [editInfraIds, setEditInfraIds] = useState<string[]>([]);
   const [editGithubUrl, setEditGithubUrl] = useState('');
@@ -46,23 +49,36 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
 
   // Global lookups for editing dropdowns
   const [allProblems, setAllProblems] = useState<Problem[]>([]);
+  const [allSolutions, setAllSolutions] = useState<Solution[]>([]);
   const [allArchs, setAllArchs] = useState<Architecture[]>([]);
   const [allInfras, setAllInfras] = useState<Infrastructure[]>([]);
 
   const loadLookups = useCallback(async () => {
     try {
-      const [probs, archs, infras] = await Promise.all([
+      const [probs, archs, infras, sols] = await Promise.all([
         api.getProblems(),
         api.getArchitectures(),
         api.getInfrastructures(),
+        api.getSolutions(),
       ]);
       setAllProblems(probs);
       setAllArchs(archs);
       setAllInfras(infras);
+      setAllSolutions(sols);
     } catch (err) {
       console.error('Failed to load lookup data for editing relations', err);
     }
   }, []);
+
+  const reloadProblemSolutions = useCallback(async () => {
+    if (component !== 'problems' || !id) return;
+    try {
+      const sols = await api.getSolutions();
+      setProblemSolutions(sols.filter((s) => s.problem?.id === id));
+    } catch {
+      setProblemSolutions([]);
+    }
+  }, [component, id]);
 
   const loadEntity = useCallback(async () => {
     setLoading(true);
@@ -78,6 +94,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     setReadme('');
     setRelatedSolutions([]);
     setRelatedApps([]);
+    setProblemSolutions([]);
 
     try {
       if (component === 'problems') {
@@ -89,6 +106,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
         // Fetch reciprocal apps for this problem
         const apps = await api.getApps();
         setRelatedApps(apps.filter((a) => a.problem?.id === id));
+
+        // Fetch full solutions targeting this problem
+        const sols = await api.getSolutions();
+        setProblemSolutions(sols.filter((s) => s.problem?.id === id));
       } else if (component === 'solutions') {
         const data = await api.getSolution(id);
         setSolutionData(data);
@@ -121,7 +142,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
         setAppData(data);
         setEditTitle(data.title);
         setEditDescription(data.description);
-        setEditProblemId(data.problem?.id || '');
+        setEditSolutionId(data.solution?.id || '');
         setEditGithubUrl(data.github_url);
         setEditLiveUrl(data.live_url || '');
         await loadLookups();
@@ -177,7 +198,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
         await api.updateApp(id, {
           title: editTitle.trim(),
           description: editDescription.trim(),
-          problem_id: editProblemId || undefined,
+          solution_id: editSolutionId || undefined,
           github_url: editGithubUrl.trim(),
           live_url: editLiveUrl.trim() || undefined,
         });
@@ -378,13 +399,13 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               {component === 'apps' && (
                 <>
                   <div className="form-field">
-                    <label htmlFor="app-prob-edit">Target Problem</label>
+                    <label htmlFor="app-sol-edit">Target Solution (Optional)</label>
                     <CustomSelect
-                      id="app-prob-edit"
-                      value={editProblemId}
-                      onChange={setEditProblemId}
-                      options={allProblems.map((p) => ({ value: p.id, label: p.title }))}
-                      placeholder="-- Select Problem Target --"
+                      id="app-sol-edit"
+                      value={editSolutionId}
+                      onChange={setEditSolutionId}
+                      options={allSolutions.map((s) => ({ value: s.id, label: s.title }))}
+                      placeholder="-- Select Solution Target --"
                     />
                   </div>
 
@@ -423,13 +444,24 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                 </button>
               </div>
 
-              <div className="viewer-body">
-                <div className="description-body">
-                  <MarkdownRenderer content={getEntityDescription()} />
-                </div>
+                <div className="viewer-body">
+                  <div className="description-body">
+                    <MarkdownRenderer content={getEntityDescription()} />
+                  </div>
 
-                {/* Plex Visualizer Graph Section */}
-                {component === 'problems' && problemData && (
+                  {/* Embedded Solutions (migrated from Solutions tab) */}
+                  {component === 'problems' && problemData && (
+                    <ProblemSolutions
+                      problemId={problemData.id}
+                      problemTitle={problemData.title}
+                      solutions={problemSolutions}
+                      onChanged={reloadProblemSolutions}
+                      onNavigate={onNavigate}
+                    />
+                  )}
+
+                  {/* Plex Visualizer Graph Section */}
+                  {component === 'problems' && problemData && (
                   <div className="card-visualizer-section">
                     <h4 className="visualizer-section-title">Plex Visualizer</h4>
                     <PlexVisualizer

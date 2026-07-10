@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { ProblemsTab } from './components/ProblemsTab';
-import { SolutionsTab } from './components/SolutionsTab';
 import { ArchitectureTab } from './components/ArchitectureTab';
 import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
@@ -51,7 +50,6 @@ export function App() {
 
   const tabs: TabInfo[] = [
     { id: 'problems', label: 'Problems' },
-    { id: 'solutions', label: 'Solutions' },
     { id: 'architecture', label: 'Architecture' },
     { id: 'infrastructure', label: 'Infrastructure' },
     { id: 'apps', label: 'Apps' },
@@ -123,14 +121,6 @@ export function App() {
                   <ProblemsTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/problems/${id}`)}
-                  />
-                </div>
-              )}
-              {activeTab === 'solutions' && (
-                <div className="tab-view">
-                  <SolutionsTab
-                    searchQuery={searchQuery}
-                    onCardClick={(id) => navigate(`/solutions/${id}`)}
                   />
                 </div>
               )}
