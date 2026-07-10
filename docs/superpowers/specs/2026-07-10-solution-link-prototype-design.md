@@ -65,17 +65,17 @@ interface SolutionPrototypesProps {
 
 ### 5.3 Create Prototype
 
-- Button `+ Create Prototype` opens a modal with the same fields used by the App tab
-  form (`client/src/components/AppsTab.tsx`): Title, Description, GitHub URL (required),
-  Live URL (optional).
+- Button `+ Create Prototype` opens a dedicated **Create modal** with the same fields
+  used by the App tab form (`client/src/components/AppsTab.tsx`): Title, Description,
+  GitHub URL (required), Live URL (optional).
 - On submit, calls `api.createApp({ title, description, github_url, live_url?, solution_id: solutionId })`.
 - The app's Problem is derived automatically server-side from the solution's problem
   (`server/services/apps.py:48`), so it appears correctly in the Apps tab and App detail.
 
 ### 5.4 Link Existing Prototype
 
-- Button `+ Link Existing` (or a toggle within the same modal area) opens a selector
-  populated from `api.getApps()`.
+- Button `+ Link Existing` opens a separate **Link modal** (distinct from the Create
+  modal) containing a dropdown/selector populated from `api.getApps()`.
 - Filter out apps whose `solution?.id === solutionId` (already linked).
 - Selecting an app calls `api.updateApp(app.id, { solution_id: solutionId })` to attach it.
 
