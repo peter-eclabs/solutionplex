@@ -28,13 +28,6 @@ if errorlevel 1 (
 
 REM --- Backend (FastAPI / uv) ---------------------------------------------
 echo [1/3] Setting up backend (server)...
-if not exist "%ROOT%server\.env" (
-    echo       Creating server\.env with default settings...
-    >  "%ROOT%server\.env" echo MONGODB_URL=mongodb://localhost:27017
-    >> "%ROOT%server\.env" echo MONGODB_DB=solutionplex
-) else (
-    echo       server\.env already exists - leaving it untouched.
-)
 
 echo       Syncing Python dependencies with uv...
 pushd "%ROOT%server"
