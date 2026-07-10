@@ -48,7 +48,7 @@ class ProblemCreate(BaseModel):
 
 
 class ProblemResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
     description: str
     solutions: List[SolutionShort] = []
@@ -69,7 +69,7 @@ class ArchitectureCreate(BaseModel):
 
 
 class ArchitectureResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
     description: str
     created_at: datetime
@@ -89,7 +89,7 @@ class InfrastructureCreate(BaseModel):
 
 
 class InfrastructureResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
     description: str
     created_at: datetime
@@ -112,7 +112,7 @@ class SolutionCreate(BaseModel):
 
 
 class SolutionResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
     description: str
     problem: Optional[ProblemShort] = None
@@ -138,7 +138,7 @@ class AppCreate(BaseModel):
 
 
 class AppResponse(BaseModel):
-    id: PyObjectId = Field(alias="_id")
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
     description: str
     github_url: str

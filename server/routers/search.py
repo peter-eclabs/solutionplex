@@ -3,6 +3,13 @@ from typing import Any, List
 
 from fastapi import APIRouter, HTTPException, Query
 
+from server.schemas.models import (
+    AppResponse,
+    ArchitectureResponse,
+    InfrastructureResponse,
+    ProblemResponse,
+    SolutionResponse,
+)
 from server.services import (
     apps,
     architectures,
@@ -28,15 +35,20 @@ async def search(
 ) -> Any:
     try:
         if tab == "problems":
-            return await problems.list_problems(q=q)
+            res = await problems.list_problems(q=q)
+            return [ProblemResponse.model_validate(r) for r in res]
         elif tab == "solutions":
-            return await solutions.list_solutions(q=q)
+            res = await solutions.list_solutions(q=q)
+            return [SolutionResponse.model_validate(r) for r in res]
         elif tab == "architecture":
-            return await architectures.list_architectures(q=q)
+            res = await architectures.list_architectures(q=q)
+            return [ArchitectureResponse.model_validate(r) for r in res]
         elif tab == "infrastructure":
-            return await infrastructures.list_infrastructures(q=q)
+            res = await infrastructures.list_infrastructures(q=q)
+            return [InfrastructureResponse.model_validate(r) for r in res]
         elif tab == "apps":
-            return await apps.list_apps(q=q)
+            res = await apps.list_apps(q=q)
+            return [AppResponse.model_validate(r) for r in res]
         else:
             raise HTTPException(status_code=400, detail="Invalid tab target")
     except HTTPException:
