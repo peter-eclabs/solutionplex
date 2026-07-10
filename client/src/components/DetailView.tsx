@@ -504,6 +504,15 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   </div>
                 )}
                 {component === 'solutions' && solutionData && (
+                  <SolutionPrototypes
+                    solutionId={solutionData.id}
+                    solutionTitle={solutionData.title}
+                    apps={solutionData.apps}
+                    onChanged={() => queryClient.invalidateQueries({ queryKey: ['solutions', solutionData.id] })}
+                    onNavigate={onNavigate}
+                  />
+                )}
+                {component === 'solutions' && solutionData && (
                   <div className="card-visualizer-section">
                     <h4 className="visualizer-section-title">Plex Visualizer</h4>
                     <PlexVisualizer
@@ -512,15 +521,6 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                       onNavigate={onNavigate}
                     />
                   </div>
-                )}
-                {component === 'solutions' && solutionData && (
-                  <SolutionPrototypes
-                    solutionId={solutionData.id}
-                    solutionTitle={solutionData.title}
-                    apps={solutionData.apps}
-                    onChanged={() => queryClient.invalidateQueries({ queryKey: ['solutions', solutionData.id] })}
-                    onNavigate={onNavigate}
-                  />
                 )}
                 {component === 'architecture' && archData && (
                   <div className="card-visualizer-section">
