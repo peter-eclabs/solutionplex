@@ -12,8 +12,8 @@
 **Files:**
 - `client/src/components/AppsTab.tsx` (Create)
 
-- [ ] Load and follow the `frontend-design` skill by using `view_file` on `C:\Users\Peter\..gemini\skills\frontend-design\SKILL.md` before implementing the component.
-- [ ] Create `client/src/components/AppsTab.tsx` featuring problem linking, URL validation, and a lazy-loading accordion/button for README contents. If a Live URL is provided, display a prominent "Launch App ↗" call-to-action button:
+- [x] Load and follow the `frontend-design` skill by using `view_file` on `C:\Users\Peter\..gemini\skills\frontend-design\SKILL.md` before implementing the component.
+- [x] Create `client/src/components/AppsTab.tsx` featuring problem linking, URL validation, and a lazy-loading accordion/button for README contents. If a Live URL is provided, display a prominent "Launch App ↗" call-to-action button:
   ```tsx
   import { useState, useEffect } from 'react';
   import { api, AppPrototype, Problem } from '../api/client';
@@ -260,7 +260,7 @@
     );
   }
   ```
-- [ ] Commit AppsTab component:
+- [x] Commit AppsTab component:
   ```bash
   git add client/src/components/AppsTab.tsx
   git commit -m "feat: implement AppsTab component with README lazy loading and action items"
@@ -272,7 +272,7 @@
 **Files:**
 - `client/src/App.tsx` (Modify)
 
-- [ ] Modify `client/src/App.tsx` to replace the apps placeholder with the actual component:
+- [x] Modify `client/src/App.tsx` to replace the apps placeholder with the actual component:
   ```tsx
   // Insert import at the top
   import AppsTab from './components/AppsTab';
@@ -282,12 +282,12 @@
   // With:
   // {activeTab === 'apps' && <AppsTab searchQuery={searchQuery} />}
   ```
-- [ ] Verify compiling and building without errors:
+- [x] Verify compiling and building without errors:
   ```bash
   cd client
   npm run build
   ```
-- [ ] Commit changes:
+- [x] Commit changes:
   ```bash
   git add client/src/App.tsx
   git commit -m "feat: link AppsTab page within core client routing shell"
