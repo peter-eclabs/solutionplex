@@ -4,6 +4,7 @@ import { ProblemsTab } from './components/ProblemsTab';
 import { SolutionsTab } from './components/SolutionsTab';
 import { ArchitectureTab } from './components/ArchitectureTab';
 import { InfrastructureTab } from './components/InfrastructureTab';
+import { AppsTab } from './components/AppsTab';
 
 export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
 
@@ -84,8 +85,7 @@ export function App() {
         )}
         {activeTab === 'apps' && (
           <div className="tab-view">
-            <h2>Apps Section</h2>
-            <p>Pending implementation...</p>
+            <AppsTab searchQuery={searchQuery} />
           </div>
         )}
       </main>
