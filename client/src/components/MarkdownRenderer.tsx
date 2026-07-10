@@ -11,7 +11,12 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
   const parsedHtml = useMemo(() => {
     try {
       // marked.parse runs synchronously in modern versions unless async: true is passed
-      return marked.parse(content || '') as string;
+      const html = marked.parse(content || '') as string;
+      // Wrap tables so overflow-wide tables become horizontally scrollable
+      return html.replace(
+        /<table[\s\S]*?<\/table>/g,
+        (match) => `<div class="md-scroll-x">${match}</div>`,
+      );
     } catch (err) {
       console.error('Failed to parse markdown:', err);
       return content || '';

@@ -80,6 +80,8 @@
   border-radius: 0;
   color: var(--text-primary);
   font-size: 0.85rem;
+  white-space: pre;
+  word-break: normal;
 }
 
 .markdown-content code {
@@ -102,14 +104,29 @@
   margin-bottom: 0.35rem;
 }
 
-.markdown-content table {
-  width: 100%;
-  border-collapse: collapse;
+.markdown-content .md-scroll-x {
+  overflow-x: auto;
+  max-width: 100%;
   margin-bottom: 1rem;
-  background-color: var(--bg-secondary);
   border: 1px solid var(--border-grid);
   border-radius: var(--radius-md);
-  overflow: hidden;
+}
+
+.markdown-content table {
+  min-width: 100%;
+  width: max-content;
+  border-collapse: collapse;
+  background-color: var(--bg-secondary);
+}
+
+.markdown-content .md-scroll-x table {
+  margin-bottom: 0;
+  border: none;
+}
+
+.markdown-content th,
+.markdown-content td {
+  white-space: nowrap;
 }
 
 .markdown-content th,

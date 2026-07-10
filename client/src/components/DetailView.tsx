@@ -4,6 +4,8 @@ import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } fr
 import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
+import { CustomSelect } from './CustomSelect';
+
 
 interface DetailViewProps {
   component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
@@ -329,19 +331,13 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                 <>
                   <div className="form-field">
                     <label htmlFor="sol-prob-edit">Target Problem</label>
-                    <select
+                    <CustomSelect
                       id="sol-prob-edit"
                       value={editProblemId}
-                      onChange={(e) => setEditProblemId(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Select Problem Target --</option>
-                      {allProblems.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setEditProblemId}
+                      options={allProblems.map((p) => ({ value: p.id, label: p.title }))}
+                      placeholder="-- Select Problem Target --"
+                    />
                   </div>
 
                   <div className="form-field">
@@ -383,19 +379,13 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                 <>
                   <div className="form-field">
                     <label htmlFor="app-prob-edit">Target Problem</label>
-                    <select
+                    <CustomSelect
                       id="app-prob-edit"
                       value={editProblemId}
-                      onChange={(e) => setEditProblemId(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Select Problem Target --</option>
-                      {allProblems.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setEditProblemId}
+                      options={allProblems.map((p) => ({ value: p.id, label: p.title }))}
+                      placeholder="-- Select Problem Target --"
+                    />
                   </div>
 
                   <div className="form-field">

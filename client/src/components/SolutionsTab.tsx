@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Solution, Problem, Architecture, Infrastructure } from '../api/client';
+import { MultiSelect } from './MultiSelect';
 import './TabStyles.css';
+import { CustomSelect } from './CustomSelect';
+
 
 interface SolutionsTabProps {
   searchQuery: string;
@@ -73,22 +76,6 @@ export function SolutionsTab({
   useEffect(() => {
     loadSolutions();
   }, [loadSolutions]);
-
-  const handleArchCheckbox = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedArchIds([...selectedArchIds, id]);
-    } else {
-      setSelectedArchIds(selectedArchIds.filter((item) => item !== id));
-    }
-  };
-
-  const handleInfraCheckbox = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedInfraIds([...selectedInfraIds, id]);
-    } else {
-      setSelectedInfraIds(selectedInfraIds.filter((item) => item !== id));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,63 +149,37 @@ export function SolutionsTab({
 
                 <div className="form-field">
                   <label htmlFor="sol-problem">Problem Statement (1:1)</label>
-                  <select
+                  <CustomSelect
                     id="sol-problem"
                     value={selectedProblemId}
-                    onChange={(e) => setSelectedProblemId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Select Problem Target --</option>
-                    {problems.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedProblemId}
+                    options={problems.map((p) => ({ value: p.id, label: p.title }))}
+                    placeholder="-- Select Problem Target --"
+                  />
                 </div>
 
                 <div className="form-field">
                   <label>Architecture Designs (1:N)</label>
-                  <div className="checkbox-select-list">
-                    {architectures.length === 0 ? (
-                      <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                        No architectures available
-                      </span>
-                    ) : (
-                      architectures.map((arch) => (
-                        <label key={arch.id} className="checkbox-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedArchIds.includes(arch.id)}
-                            onChange={(e) => handleArchCheckbox(arch.id, e.target.checked)}
-                          />
-                          {arch.title}
-                        </label>
-                      ))
-                    )}
-                  </div>
+                  <MultiSelect
+                    id="sol-arch"
+                    options={architectures.map((arch) => ({ value: arch.id, label: arch.title }))}
+                    selectedValues={selectedArchIds}
+                    onChange={setSelectedArchIds}
+                    placeholder="Search architecture designs…"
+                    emptyText="No architectures available"
+                  />
                 </div>
 
                 <div className="form-field">
                   <label>Infrastructure Stacks (1:N)</label>
-                  <div className="checkbox-select-list">
-                    {infrastructures.length === 0 ? (
-                      <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                        No infrastructure available
-                      </span>
-                    ) : (
-                      infrastructures.map((infra) => (
-                        <label key={infra.id} className="checkbox-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedInfraIds.includes(infra.id)}
-                            onChange={(e) => handleInfraCheckbox(infra.id, e.target.checked)}
-                          />
-                          {infra.title}
-                        </label>
-                      ))
-                    )}
-                  </div>
+                  <MultiSelect
+                    id="sol-infra"
+                    options={infrastructures.map((infra) => ({ value: infra.id, label: infra.title }))}
+                    selectedValues={selectedInfraIds}
+                    onChange={setSelectedInfraIds}
+                    placeholder="Search infrastructure stacks…"
+                    emptyText="No infrastructure available"
+                  />
                 </div>
 
                 <button

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { AppPrototype, Problem } from '../api/client';
 import './TabStyles.css';
+import { CustomSelect } from './CustomSelect';
+
 
 interface AppsTabProps {
   searchQuery: string;
@@ -137,17 +139,13 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
 
                 <div className="form-field">
                   <label htmlFor="app-problem">Problem Statement (1:1)</label>
-                  <select
+                  <CustomSelect
                     id="app-problem"
                     value={selectedProblemId}
-                    onChange={(e) => setSelectedProblemId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Select Problem Target --</option>
-                    {problems.map((p) => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
-                  </select>
+                    onChange={setSelectedProblemId}
+                    options={problems.map((p) => ({ value: p.id, label: p.title }))}
+                    placeholder="-- Select Problem Target --"
+                  />
                 </div>
 
                 <div className="form-field">
