@@ -7,6 +7,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
 import { ProblemSolutions } from './ProblemSolutions';
+import { SolutionPrototypes } from './SolutionPrototypes';
 
 interface DetailViewProps {
   component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
@@ -218,6 +219,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     if (!editTitle.trim() || !editDescription.trim()) {
       return;
     }
+    if (component === 'apps' && !editSolutionId) {
+      setError('Target Solution is a required field.');
+      return;
+    }
     setError('');
     try {
       await updateMutation.mutateAsync();
@@ -425,7 +430,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               {component === 'apps' && (
                 <>
                   <div className="form-field">
-                    <label htmlFor="app-sol-edit">Target Solution (Optional)</label>
+                    <label htmlFor="app-sol-edit">Target Solution (Required)</label>
                     <CustomSelect
                       id="app-sol-edit"
                       value={editSolutionId}
@@ -507,6 +512,15 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                       onNavigate={onNavigate}
                     />
                   </div>
+                )}
+                {component === 'solutions' && solutionData && (
+                  <SolutionPrototypes
+                    solutionId={solutionData.id}
+                    solutionTitle={solutionData.title}
+                    apps={solutionData.apps}
+                    onChanged={() => queryClient.invalidateQueries({ queryKey: ['solutions', solutionData.id] })}
+                    onNavigate={onNavigate}
+                  />
                 )}
                 {component === 'architecture' && archData && (
                   <div className="card-visualizer-section">
