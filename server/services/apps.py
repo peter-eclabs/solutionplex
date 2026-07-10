@@ -41,6 +41,13 @@ async def populate_app(a: dict) -> dict:
     a["problem"] = (
         {"id": str(prob["_id"]), "title": prob["title"]} if prob else None
     )
+
+    # Resolve solutions sharing the same problem
+    sol_cursor = client.solutions_col.find({"problem_id": a["problem_id"]})
+    sols = await sol_cursor.to_list(length=100)
+    a["solutions"] = [
+        {"id": str(s["_id"]), "title": s["title"]} for s in sols
+    ]
     return a
 
 

@@ -344,6 +344,12 @@
   background-color: var(--accent-infra-dim);
 }
 
+.app-tag {
+  color: var(--accent-cyan);
+  border-color: rgba(6, 182, 212, 0.25);
+  background-color: rgba(6, 182, 212, 0.05);
+}
+
 .prob-tag {
   color: var(--accent-problem);
   border-color: rgba(255, 77, 121, 0.25);

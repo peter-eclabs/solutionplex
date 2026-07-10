@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { AppPrototype, Problem } from '../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface AppsTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
   onCardClickProblem: (id: string) => void;
+  onCardClickSolution: (id: string) => void;
 }
 
-export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTabProps) {
+export function AppsTab({ searchQuery, onCardClick, onCardClickProblem, onCardClickSolution }: AppsTabProps) {
   const [apps, setApps] = useState<AppPrototype[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   
@@ -244,7 +246,30 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
                   </div>
                   <span className="card-timestamp">{new Date(app.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="card-desc card-desc-preview">{previewDescription(app.description)}</p>
+                <div className="card-desc card-desc-preview">
+                  <MarkdownRenderer content={previewDescription(app.description)} />
+                </div>
+
+                {app.solutions && app.solutions.length > 0 && (
+                  <div className="card-relations" style={{ paddingBottom: '0.75rem' }}>
+                    <h5 style={{ color: 'var(--accent-solution)' }}>Associated Solutions</h5>
+                    <ul className="relation-list">
+                      {app.solutions.map((sol) => (
+                        <li
+                          key={sol.id}
+                          className="relation-tag solution-tag"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCardClickSolution(sol.id);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <span>{sol.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
                   <a

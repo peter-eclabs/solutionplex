@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Infrastructure } from '../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface InfrastructureTabProps {
@@ -151,9 +152,9 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                     {new Date(i.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc card-desc-preview">
-                  {previewDescription(i.description)}
-                </p>
+                <div className="card-desc card-desc-preview">
+                  <MarkdownRenderer content={previewDescription(i.description)} />
+                </div>
               </article>
             ))}
           </div>

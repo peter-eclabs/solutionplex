@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
 import { PlexVisualizer } from './PlexVisualizer';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface DetailViewProps {
@@ -433,7 +434,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               </div>
 
               <div className="viewer-body">
-                <p className="description-body">{getEntityDescription()}</p>
+                <div className="description-body">
+                  <MarkdownRenderer content={getEntityDescription()} />
+                </div>
 
                 {/* Plex Visualizer Graph Section */}
                 {component === 'problems' && problemData && (
@@ -522,7 +525,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   {readmeLoading ? (
                     <p className="status-text">Accessing GitHub repository README streams...</p>
                   ) : (
-                    <pre className="readme-block">{readme}</pre>
+                    <div className="readme-block">
+                      <MarkdownRenderer content={readme} />
+                    </div>
                   )}
                 </div>
               )}

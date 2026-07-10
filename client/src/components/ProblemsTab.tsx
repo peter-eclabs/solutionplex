@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
@@ -152,9 +153,9 @@ export function ProblemsTab({ searchQuery, onCardClick, onCardClickSolution }: P
                     {new Date(p.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc card-desc-preview">
-                  {previewDescription(p.description)}
-                </p>
+                <div className="card-desc card-desc-preview">
+                  <MarkdownRenderer content={previewDescription(p.description)} />
+                </div>
 
                 {p.solutions && p.solutions.length > 0 && (
                   <div className="card-relations">

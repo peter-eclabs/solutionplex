@@ -242,7 +242,7 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    const outerItems: { id: string; label: string; type: 'problem' | 'architecture' | 'infrastructure'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    const outerItems: { id: string; label: string; type: 'problem' | 'architecture' | 'infrastructure' | 'app'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
     
     if (solution.problem) {
       outerItems.push({
@@ -295,6 +295,28 @@ export function PlexVisualizer({
         grad: 'grad-sol-infra',
         isCategory: true,
         items: infras.map((i) => ({ id: i.id, title: i.title })),
+      });
+    }
+
+    // Apps: 1 direct, >1 category node
+    const apps = solution.apps || [];
+    if (apps.length === 1) {
+      outerItems.push({
+        id: apps[0].id,
+        label: apps[0].title,
+        type: 'app',
+        icon: 'app',
+        grad: 'grad-sol-app',
+      });
+    } else if (apps.length > 1) {
+      outerItems.push({
+        id: 'cat-apps',
+        label: 'Apps',
+        type: 'app',
+        icon: 'app',
+        grad: 'grad-sol-app',
+        isCategory: true,
+        items: apps.map((a) => ({ id: a.id, title: a.title })),
       });
     }
 
@@ -466,7 +488,7 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    const outerItems: { id: string; label: string; type: 'problem'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    const outerItems: { id: string; label: string; type: 'problem' | 'solution'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
     if (app.problem) {
       outerItems.push({
         id: app.problem.id,
@@ -474,6 +496,28 @@ export function PlexVisualizer({
         type: 'problem',
         icon: 'arrow-left',
         grad: 'grad-prob-app',
+      });
+    }
+
+    // Solutions: 1 direct, >1 category node
+    const sols = app.solutions || [];
+    if (sols.length === 1) {
+      outerItems.push({
+        id: sols[0].id,
+        label: sols[0].title,
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-app',
+      });
+    } else if (sols.length > 1) {
+      outerItems.push({
+        id: 'cat-solutions',
+        label: 'Solutions',
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-app',
+        isCategory: true,
+        items: sols.map((s) => ({ id: s.id, title: s.title })),
       });
     }
 
@@ -601,6 +645,10 @@ export function PlexVisualizer({
             </linearGradient>
             <linearGradient id="grad-prob-app" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="var(--accent-problem)" />
+              <stop offset="100%" stopColor="var(--accent-cyan)" />
+            </linearGradient>
+            <linearGradient id="grad-sol-app" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="var(--accent-solution)" />
               <stop offset="100%" stopColor="var(--accent-cyan)" />
             </linearGradient>
           </defs>

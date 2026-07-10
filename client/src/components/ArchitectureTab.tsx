@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Architecture } from '../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface ArchitectureTabProps {
@@ -151,9 +152,9 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                     {new Date(a.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc card-desc-preview">
-                  {previewDescription(a.description)}
-                </p>
+                <div className="card-desc card-desc-preview">
+                  <MarkdownRenderer content={previewDescription(a.description)} />
+                </div>
               </article>
             ))}
           </div>

@@ -133,6 +133,7 @@ export function App() {
                   onCardClickProblem={(id) => navigate(`/problems/${id}`)}
                   onCardClickArch={(id) => navigate(`/architecture/${id}`)}
                   onCardClickInfra={(id) => navigate(`/infrastructure/${id}`)}
+                  onCardClickApp={(id) => navigate(`/apps/${id}`)}
                 />
               </div>
             )}
@@ -158,6 +159,7 @@ export function App() {
                   searchQuery={searchQuery}
                   onCardClick={(id) => navigate(`/apps/${id}`)}
                   onCardClickProblem={(id) => navigate(`/problems/${id}`)}
+                  onCardClickSolution={(id) => navigate(`/solutions/${id}`)}
                 />
               </div>
             )}

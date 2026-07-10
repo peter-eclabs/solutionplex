@@ -18,6 +18,11 @@ export interface InfrastructureShort {
   title: string;
 }
 
+export interface AppShort {
+  id: string;
+  title: string;
+}
+
 export interface Problem {
   id: string;
   title: string;
@@ -50,6 +55,7 @@ export interface Solution {
   problem: ProblemShort | null;
   architectures: ArchitectureShort[];
   infrastructures: InfrastructureShort[];
+  apps: AppShort[];
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +67,7 @@ export interface AppPrototype {
   github_url: string;
   live_url?: string;
   problem: ProblemShort | null;
+  solutions: SolutionShort[];
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { Solution, Problem, Architecture, Infrastructure } from '../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 
 interface SolutionsTabProps {
@@ -9,6 +10,7 @@ interface SolutionsTabProps {
   onCardClickProblem: (id: string) => void;
   onCardClickArch: (id: string) => void;
   onCardClickInfra: (id: string) => void;
+  onCardClickApp: (id: string) => void;
 }
 
 export function SolutionsTab({
@@ -17,6 +19,7 @@ export function SolutionsTab({
   onCardClickProblem,
   onCardClickArch,
   onCardClickInfra,
+  onCardClickApp,
 }: SolutionsTabProps) {
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -283,7 +286,89 @@ export function SolutionsTab({
                     {new Date(s.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc card-desc-preview">{previewDescription(s.description)}</p>
+                <div className="card-desc card-desc-preview">
+                  <MarkdownRenderer content={previewDescription(s.description)} />
+                </div>
+                <div className="card-relations" style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {s.problem && (
+                    <div>
+                      <h5 style={{ color: 'var(--accent-problem)', margin: '0 0 0.2rem 0', fontSize: '0.75rem' }}>Target Problem</h5>
+                      <span
+                        className="relation-tag prob-tag"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCardClickProblem(s.problem!.id);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {s.problem.title}
+                      </span>
+                    </div>
+                  )}
+
+                  {s.architectures && s.architectures.length > 0 && (
+                    <div>
+                      <h5 style={{ color: 'var(--accent-arch)', margin: '0 0 0.2rem 0', fontSize: '0.75rem' }}>Architecture</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {s.architectures.map((arch) => (
+                          <span
+                            key={arch.id}
+                            className="relation-tag arch-tag"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCardClickArch(arch.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {arch.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {s.infrastructures && s.infrastructures.length > 0 && (
+                    <div>
+                      <h5 style={{ color: 'var(--accent-infra)', margin: '0 0 0.2rem 0', fontSize: '0.75rem' }}>Infrastructure</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {s.infrastructures.map((infra) => (
+                          <span
+                            key={infra.id}
+                            className="relation-tag infra-tag"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCardClickInfra(infra.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {infra.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {s.apps && s.apps.length > 0 && (
+                    <div>
+                      <h5 style={{ color: 'var(--accent-cyan)', margin: '0 0 0.2rem 0', fontSize: '0.75rem' }}>Linked Prototypes</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {s.apps.map((app) => (
+                          <span
+                            key={app.id}
+                            className="relation-tag app-tag"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCardClickApp(app.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {app.title}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </article>
             ))}
           </div>

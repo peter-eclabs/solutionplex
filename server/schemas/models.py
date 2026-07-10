@@ -41,6 +41,11 @@ class InfrastructureShort(BaseModel):
     title: str
 
 
+class AppShort(BaseModel):
+    id: str
+    title: str
+
+
 # Problems
 class ProblemCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
@@ -141,6 +146,7 @@ class SolutionResponse(BaseModel):
     problem: Optional[ProblemShort] = None
     architectures: List[ArchitectureShort] = []
     infrastructures: List[InfrastructureShort] = []
+    apps: List[AppShort] = []
     created_at: datetime
     updated_at: datetime
 
@@ -175,6 +181,7 @@ class AppResponse(BaseModel):
     github_url: str
     live_url: Optional[str] = None
     problem: Optional[ProblemShort] = None
+    solutions: List[SolutionShort] = []
     created_at: datetime
     updated_at: datetime
 

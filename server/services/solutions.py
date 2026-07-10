@@ -79,6 +79,13 @@ async def populate_solution(s: dict) -> dict:
     s["infrastructures"] = [
         {"id": str(i["_id"]), "title": i["title"]} for i in infras
     ]
+
+    # Resolve apps sharing the same problem
+    app_cursor = client.apps_col.find({"problem_id": s["problem_id"]})
+    apps = await app_cursor.to_list(length=100)
+    s["apps"] = [
+        {"id": str(a["_id"]), "title": a["title"]} for a in apps
+    ]
     return s
 
 

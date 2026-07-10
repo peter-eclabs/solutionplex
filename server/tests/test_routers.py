@@ -351,4 +351,80 @@ def test_get_app_not_found(client, mock_db):
     assert res.json()["detail"] == "App not found"
 
 
+def test_problem_solution_app_relationship(client, mock_db):
+    from datetime import datetime
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+    solution_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+
+    # Mock database responses for solution populate
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "title": "DB Lock"}
+    )
+    
+    mock_arch_cursor = AsyncMock()
+    mock_arch_cursor.to_list = AsyncMock(return_value=[])
+    mock_db.architectures.find = MagicMock(return_value=mock_arch_cursor)
+
+    mock_infra_cursor = AsyncMock()
+    mock_infra_cursor.to_list = AsyncMock(return_value=[])
+    mock_db.infrastructures.find = MagicMock(return_value=mock_infra_cursor)
+
+    # When get_solution is called, it calls client.apps_col.find
+    mock_apps_cursor = AsyncMock()
+    mock_apps_cursor.to_list = AsyncMock(
+        return_value=[{"_id": app_id, "title": "Cache Monitor Admin"}]
+    )
+    mock_db.apps.find = MagicMock(return_value=mock_apps_cursor)
+
+    # Set up solution mock find_one
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={
+            "_id": solution_id,
+            "title": "Fix locks",
+            "description": "Add connection pooling",
+            "problem_id": problem_id,
+            "architecture_ids": [],
+            "infrastructure_ids": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+
+    # Call get_solution api endpoint
+    res_sol = client.get(f"/api/solutions/{solution_id}")
+    assert res_sol.status_code == 200
+    data_sol = res_sol.json()
+    assert data_sol["apps"][0]["id"] == str(app_id)
+    assert data_sol["apps"][0]["title"] == "Cache Monitor Admin"
+
+    # Now verify get_app resolves solution
+    mock_sols_cursor = AsyncMock()
+    mock_sols_cursor.to_list = AsyncMock(
+        return_value=[{"_id": solution_id, "title": "Fix locks"}]
+    )
+    mock_db.solutions.find = MagicMock(return_value=mock_sols_cursor)
+
+    # Set up app mock find_one
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": app_id,
+            "title": "Cache Monitor Admin",
+            "description": "Core features...",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": "https://myprototype.vercel.app",
+            "problem_id": problem_id,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+
+    # Call get_app api endpoint
+    res_app = client.get(f"/api/apps/{app_id}")
+    assert res_app.status_code == 200
+    data_app = res_app.json()
+    assert data_app["solutions"][0]["id"] == str(solution_id)
+    assert data_app["solutions"][0]["title"] == "Fix locks"
+
+
 
