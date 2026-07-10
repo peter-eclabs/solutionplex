@@ -187,3 +187,94 @@ def test_fetch_readme_api_error(client, monkeypatch):
     assert res.status_code == 400
     assert "Failed to fetch README from GitHub API" in res.json()["detail"]
 
+
+def test_create_app_success(client, mock_db):
+    from datetime import datetime
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+    )
+    mock_db.apps.insert_one = AsyncMock(
+        return_value=type(
+            "Result",
+            (object,),
+            {"inserted_id": ObjectId("60b8d5a1b55a8b0c848b4580")},
+        )()
+    )
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": ObjectId("60b8d5a1b55a8b0c848b4580"),
+            "title": "Cache Monitor Admin",
+            "description": "Core features and target users...",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": "https://myprototype.vercel.app",
+            "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+
+    res = client.post(
+        "/api/apps/",
+        json={
+            "title": "Cache Monitor Admin",
+            "description": "Core features and target users...",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": "https://myprototype.vercel.app",
+            "problem_id": "60b8d5a1b55a8b0c848b4567",
+        },
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["title"] == "Cache Monitor Admin"
+    assert data["github_url"] == "https://github.com/owner/repo"
+    assert data["live_url"] == "https://myprototype.vercel.app"
+    assert data["problem"]["title"] == "DB Lock"
+
+
+def test_create_app_invalid_problem(client, mock_db):
+    # If problem is not found, return 400
+    mock_db.problems.find_one = AsyncMock(return_value=None)
+    res = client.post(
+        "/api/apps/",
+        json={
+            "title": "Cache Monitor Admin",
+            "description": "Core features and target users...",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": "https://myprototype.vercel.app",
+            "problem_id": "60b8d5a1b55a8b0c848b4567",
+        },
+    )
+    assert res.status_code == 400
+    assert "Associated Problem not found" in res.json()["detail"]
+
+
+def test_list_apps_success(client, mock_db):
+    from datetime import datetime
+    mock_apps_cursor = AsyncMock()
+    mock_apps_cursor.to_list = AsyncMock(
+        return_value=[
+            {
+                "_id": ObjectId("60b8d5a1b55a8b0c848b4580"),
+                "title": "Cache Monitor Admin",
+                "description": "Core features...",
+                "github_url": "https://github.com/owner/repo",
+                "live_url": "https://myprototype.vercel.app",
+                "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567"),
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+        ]
+    )
+    mock_db.apps.find = MagicMock(return_value=mock_apps_cursor)
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+    )
+
+    res = client.get("/api/apps/")
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 1
+    assert data[0]["title"] == "Cache Monitor Admin"
+    assert data[0]["problem"]["title"] == "DB Lock"
+
+
