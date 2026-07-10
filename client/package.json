@@ -10,10 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.2",
     "marked": "^18.0.5",
+    "mongodb": "^7.1.1",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "mongodb": "^7.1.1"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",

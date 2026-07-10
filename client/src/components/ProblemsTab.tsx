@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
 import { DeleteButton } from './DeleteButton';
@@ -10,36 +11,23 @@ interface ProblemsTabProps {
 }
 
 export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
-  const [problems, setProblems] = useState<Problem[]>([]);
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
-  const loadProblems = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getProblems(searchQuery);
-      setProblems(data);
-      setError('');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to load problems');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery]);
+  const { data: problems = [], isLoading: loading, error: queryError } = useQuery<Problem[]>({
+    queryKey: ['problems', searchQuery],
+    queryFn: () => api.getProblems(searchQuery),
+  });
 
-  useEffect(() => {
-    loadProblems();
-  }, [loadProblems]);
+  const createMutation = useMutation({
+    mutationFn: (input: { title: string; description: string }) => api.createProblem(input),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +35,12 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
       return;
     }
     try {
-      await api.createProblem({ title: title.trim(), description: description.trim() });
+      await createMutation.mutateAsync({ title: title.trim(), description: description.trim() });
       setTitle('');
       setDescription('');
       setIsFormOpen(false);
-      loadProblems();
+      setError('');
+      queryClient.invalidateQueries({ queryKey: ['problems'] });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -109,10 +98,12 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
         </div>
       )}
 
-      <section className="list-panel">
-        {loading ? (
-          <p className="status-text">Loading problem entries...</p>
-        ) : (
+        <section className="list-panel">
+          {loading ? (
+            <p className="status-text">Loading problem entries...</p>
+          ) : queryError ? (
+            <div className="error-banner">{(queryError as Error).message || 'Failed to load problems'}</div>
+          ) : (
           <div className="cards-grid">
             <article
               className="entity-card add-card-trigger btn-problem"
@@ -149,7 +140,7 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                 <DeleteButton
                   entityLabel="Problem"
                   onDelete={() => api.deleteProblem(p.id)}
-                  onDeleted={loadProblems}
+                  onDeleted={() => queryClient.invalidateQueries({ queryKey: ['problems'] })}
                 />
 
                 <div className="card-header">

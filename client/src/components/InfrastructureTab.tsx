@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Infrastructure } from '../api/client';
 import { DeleteButton } from './DeleteButton';
@@ -10,36 +11,23 @@ interface InfrastructureTabProps {
 }
 
 export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTabProps) {
-  const [infras, setInfras] = useState<Infrastructure[]>([]);
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
-  const loadInfras = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getInfrastructures(searchQuery);
-      setInfras(data);
-      setError('');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to load infrastructures');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery]);
+  const { data: infras = [], isLoading: loading, error: queryError } = useQuery<Infrastructure[]>({
+    queryKey: ['infrastructures', searchQuery],
+    queryFn: () => api.getInfrastructures(searchQuery),
+  });
 
-  useEffect(() => {
-    loadInfras();
-  }, [loadInfras]);
+  const createMutation = useMutation({
+    mutationFn: (input: { title: string; description: string }) => api.createInfrastructure(input),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +35,12 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
       return;
     }
     try {
-      await api.createInfrastructure({ title: title.trim(), description: description.trim() });
+      await createMutation.mutateAsync({ title: title.trim(), description: description.trim() });
       setTitle('');
       setDescription('');
       setIsFormOpen(false);
-      loadInfras();
+      setError('');
+      queryClient.invalidateQueries({ queryKey: ['infrastructures'] });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -109,10 +98,12 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
         </div>
       )}
 
-      <section className="list-panel">
-        {loading ? (
-          <p className="status-text">Loading infrastructures...</p>
-        ) : (
+        <section className="list-panel">
+          {loading ? (
+            <p className="status-text">Loading infrastructures...</p>
+          ) : queryError ? (
+            <div className="error-banner">{(queryError as Error).message || 'Failed to load infrastructures'}</div>
+          ) : (
           <div className="cards-grid">
             <article
               className="entity-card add-card-trigger btn-infra"
@@ -149,7 +140,7 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                 <DeleteButton
                   entityLabel="Infrastructure"
                   onDelete={() => api.deleteInfrastructure(i.id)}
-                  onDeleted={loadInfras}
+                  onDeleted={() => queryClient.invalidateQueries({ queryKey: ['infrastructures'] })}
                 />
                 <div className="card-header">
                   <h4>{i.title}</h4>

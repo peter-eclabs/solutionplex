@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { AppPrototype, Solution } from '../api/client';
 import './TabStyles.css';
@@ -12,59 +13,39 @@ interface AppsTabProps {
 }
 
 export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
-  const [apps, setApps] = useState<AppPrototype[]>([]);
-  const [solutions, setSolutions] = useState<Solution[]>([]);
-  
+  const queryClient = useQueryClient();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
   const [selectedSolutionId, setSelectedSolutionId] = useState('');
-  
+
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
-  const loadSolutions = useCallback(async () => {
-    try {
-      const sData = await api.getSolutions();
-      setSolutions(sData);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(`Failed to populate solutions: ${err.message}`);
-      } else {
-        setError('Failed to populate solutions dropdown');
-      }
-    }
-  }, []);
+  const { data: solutions = [] } = useQuery<Solution[]>({
+    queryKey: ['solutions'],
+    queryFn: () => api.getSolutions(),
+  });
 
-  const loadApps = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getApps(searchQuery);
-      setApps(data);
-      setError('');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to load apps');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery]);
+  const { data: apps = [], isLoading: loading, error: queryError } = useQuery<AppPrototype[]>({
+    queryKey: ['apps', searchQuery],
+    queryFn: () => api.getApps(searchQuery),
+  });
 
-  useEffect(() => {
-    loadSolutions();
-  }, [loadSolutions]);
-
-  useEffect(() => {
-    loadApps();
-  }, [loadApps]);
+  const createMutation = useMutation({
+    mutationFn: (input: {
+      title: string;
+      description: string;
+      github_url: string;
+      live_url?: string;
+      solution_id?: string;
+    }) => api.createApp(input),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +54,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
       return;
     }
     try {
-      await api.createApp({
+      await createMutation.mutateAsync({
         title: title.trim(),
         description: description.trim(),
         github_url: githubUrl.trim(),
@@ -87,7 +68,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
       setSelectedSolutionId('');
       setError('');
       setIsFormOpen(false);
-      loadApps();
+      queryClient.invalidateQueries({ queryKey: ['apps'] });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -185,10 +166,12 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
         </div>
       )}
 
-      <section className="list-panel">
-        {loading ? (
-          <p className="status-text">Loading app prototype mappings...</p>
-        ) : (
+        <section className="list-panel">
+          {loading ? (
+            <p className="status-text">Loading app prototype mappings...</p>
+          ) : queryError ? (
+            <div className="error-banner">{(queryError as Error).message || 'Failed to load apps'}</div>
+          ) : (
           <div className="cards-grid">
             <article
               className="entity-card add-card-trigger btn-app"
@@ -225,7 +208,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                 <DeleteButton
                   entityLabel="App"
                   onDelete={() => api.deleteApp(app.id)}
-                  onDeleted={loadApps}
+                  onDeleted={() => queryClient.invalidateQueries({ queryKey: ['apps'] })}
                 />
                 <div className="card-header">
                   <h4>{app.title}</h4>

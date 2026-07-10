@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
 import { PlexVisualizer } from './PlexVisualizer';
@@ -7,15 +8,21 @@ import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
 import { ProblemSolutions } from './ProblemSolutions';
 
-
 interface DetailViewProps {
   component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
   id: string;
   onNavigate: (path: string) => void;
 }
 
+type DetailPayload =
+  | { kind: 'problems'; problemData: Problem; relatedApps: AppPrototype[]; problemSolutions: Solution[] }
+  | { kind: 'solutions'; solutionData: Solution }
+  | { kind: 'architecture'; archData: Architecture; relatedSolutions: Solution[] }
+  | { kind: 'infrastructure'; infraData: Infrastructure; relatedSolutions: Solution[] }
+  | { kind: 'apps'; appData: AppPrototype; readme: string };
+
 export function DetailView({ component, id, onNavigate }: DetailViewProps) {
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -53,137 +60,137 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   const [allArchs, setAllArchs] = useState<Architecture[]>([]);
   const [allInfras, setAllInfras] = useState<Infrastructure[]>([]);
 
-  const loadLookups = useCallback(async () => {
-    try {
+  const { data, isLoading, error: queryError } = useQuery<DetailPayload>({
+    queryKey: [component, id],
+    enabled: !!component && !!id,
+    queryFn: async (): Promise<DetailPayload> => {
+      switch (component) {
+        case 'problems': {
+          const [problemData, apps, sols] = await Promise.all([
+            api.getProblem(id),
+            api.getApps(),
+            api.getSolutions(),
+          ]);
+          return {
+            kind: 'problems',
+            problemData,
+            relatedApps: apps.filter((a) => a.problem?.id === id),
+            problemSolutions: sols.filter((s) => s.problem?.id === id),
+          };
+        }
+        case 'solutions': {
+          const solutionData = await api.getSolution(id);
+          return { kind: 'solutions', solutionData };
+        }
+        case 'architecture': {
+          const [archData, sols] = await Promise.all([api.getArchitecture(id), api.getSolutions()]);
+          return {
+            kind: 'architecture',
+            archData,
+            relatedSolutions: sols.filter((s) => s.architectures.some((a) => a.id === id)),
+          };
+        }
+        case 'infrastructure': {
+          const [infraData, sols] = await Promise.all([api.getInfrastructure(id), api.getSolutions()]);
+          return {
+            kind: 'infrastructure',
+            infraData,
+            relatedSolutions: sols.filter((s) => s.infrastructures.some((i) => i.id === id)),
+          };
+        }
+        case 'apps': {
+          const appData = await api.getApp(id);
+          let readme = '';
+          try {
+            const res = await api.getReadme(appData.github_url);
+            readme = res.readme_content;
+          } catch {
+            readme = 'Failed to retrieve repository README.md. Verify URL or GitHub integration.';
+          }
+          return { kind: 'apps', appData, readme };
+        }
+        default:
+          throw new Error('Unknown entity component');
+      }
+    },
+  });
+
+  const { data: lookups } = useQuery({
+    queryKey: ['detail-lookups'],
+    enabled: component === 'solutions' || component === 'apps',
+    queryFn: async () => {
       const [probs, archs, infras, sols] = await Promise.all([
         api.getProblems(),
         api.getArchitectures(),
         api.getInfrastructures(),
         api.getSolutions(),
       ]);
-      setAllProblems(probs);
-      setAllArchs(archs);
-      setAllInfras(infras);
-      setAllSolutions(sols);
-    } catch (err) {
-      console.error('Failed to load lookup data for editing relations', err);
-    }
-  }, []);
+      return { allProblems: probs, allArchs: archs, allInfras: infras, allSolutions: sols };
+    },
+  });
 
-  const reloadProblemSolutions = useCallback(async () => {
-    if (component !== 'problems' || !id) return;
-    try {
-      const sols = await api.getSolutions();
-      setProblemSolutions(sols.filter((s) => s.problem?.id === id));
-    } catch {
-      setProblemSolutions([]);
-    }
-  }, [component, id]);
+  // Hydrate view + edit state from the cached query payload.
+  useEffect(() => {
+    if (!data || isEditing) return;
 
-  const loadEntity = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    setIsEditing(false);
-    
-    // Clear previous node states to prevent stale leakage
     setProblemData(null);
     setSolutionData(null);
     setArchData(null);
     setInfraData(null);
     setAppData(null);
     setReadme('');
+    setReadmeLoading(false);
     setRelatedSolutions([]);
     setRelatedApps([]);
     setProblemSolutions([]);
 
-    try {
-      if (component === 'problems') {
-        const data = await api.getProblem(id);
-        setProblemData(data);
-        setEditTitle(data.title);
-        setEditDescription(data.description);
-
-        // Fetch reciprocal apps for this problem
-        const apps = await api.getApps();
-        setRelatedApps(apps.filter((a) => a.problem?.id === id));
-
-        // Fetch full solutions targeting this problem
-        const sols = await api.getSolutions();
-        setProblemSolutions(sols.filter((s) => s.problem?.id === id));
-      } else if (component === 'solutions') {
-        const data = await api.getSolution(id);
-        setSolutionData(data);
-        setEditTitle(data.title);
-        setEditDescription(data.description);
-        setEditProblemId(data.problem?.id || '');
-        setEditArchIds(data.architectures.map((a) => a.id));
-        setEditInfraIds(data.infrastructures.map((i) => i.id));
-        await loadLookups();
-      } else if (component === 'architecture') {
-        const data = await api.getArchitecture(id);
-        setArchData(data);
-        setEditTitle(data.title);
-        setEditDescription(data.description);
-
-        // Fetch solutions implementing this architecture
-        const sols = await api.getSolutions();
-        setRelatedSolutions(sols.filter((s) => s.architectures.some((a) => a.id === id)));
-      } else if (component === 'infrastructure') {
-        const data = await api.getInfrastructure(id);
-        setInfraData(data);
-        setEditTitle(data.title);
-        setEditDescription(data.description);
-
-        // Fetch solutions implementing this infrastructure
-        const sols = await api.getSolutions();
-        setRelatedSolutions(sols.filter((s) => s.infrastructures.some((i) => i.id === id)));
-      } else if (component === 'apps') {
-        const data = await api.getApp(id);
-        setAppData(data);
-        setEditTitle(data.title);
-        setEditDescription(data.description);
-        setEditSolutionId(data.solution?.id || '');
-        setEditGithubUrl(data.github_url);
-        setEditLiveUrl(data.live_url || '');
-        await loadLookups();
-        
-        // Fetch README
-        setReadmeLoading(true);
-        try {
-          const readmeRes = await api.getReadme(data.github_url);
-          setReadme(readmeRes.readme_content);
-        } catch {
-          setReadme('Failed to retrieve repository README.md. Verify URL or GitHub integration.');
-        } finally {
-          setReadmeLoading(false);
-        }
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to retrieve entity data.');
-      }
-    } finally {
-      setLoading(false);
+    if (data.kind === 'problems') {
+      setProblemData(data.problemData);
+      setEditTitle(data.problemData.title);
+      setEditDescription(data.problemData.description);
+      setRelatedApps(data.relatedApps);
+      setProblemSolutions(data.problemSolutions);
+    } else if (data.kind === 'solutions') {
+      setSolutionData(data.solutionData);
+      setEditTitle(data.solutionData.title);
+      setEditDescription(data.solutionData.description);
+      setEditProblemId(data.solutionData.problem?.id || '');
+      setEditArchIds(data.solutionData.architectures.map((a) => a.id));
+      setEditInfraIds(data.solutionData.infrastructures.map((i) => i.id));
+    } else if (data.kind === 'architecture') {
+      setArchData(data.archData);
+      setEditTitle(data.archData.title);
+      setEditDescription(data.archData.description);
+    } else if (data.kind === 'infrastructure') {
+      setInfraData(data.infraData);
+      setEditTitle(data.infraData.title);
+      setEditDescription(data.infraData.description);
+    } else if (data.kind === 'apps') {
+      setAppData(data.appData);
+      setEditTitle(data.appData.title);
+      setEditDescription(data.appData.description);
+      setEditSolutionId(data.appData.solution?.id || '');
+      setEditGithubUrl(data.appData.github_url);
+      setEditLiveUrl(data.appData.live_url || '');
+      setReadme(data.readme);
     }
-  }, [component, id, loadLookups]);
+  }, [data, isEditing]);
 
+  // Keep edit dropdowns populated from the lookups cache.
   useEffect(() => {
-    loadEntity();
-  }, [loadEntity]);
+    if (!lookups) return;
+    setAllProblems(lookups.allProblems);
+    setAllArchs(lookups.allArchs);
+    setAllInfras(lookups.allInfras);
+    setAllSolutions(lookups.allSolutions);
+  }, [lookups]);
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editTitle.trim() || !editDescription.trim()) {
-      return;
-    }
-    setLoading(true);
-    try {
+  const updateMutation = useMutation({
+    mutationFn: async () => {
       if (component === 'problems') {
-        await api.updateProblem(id, { title: editTitle.trim(), description: editDescription.trim() });
+        return api.updateProblem(id, { title: editTitle.trim(), description: editDescription.trim() });
       } else if (component === 'solutions') {
-        await api.updateSolution(id, {
+        return api.updateSolution(id, {
           title: editTitle.trim(),
           description: editDescription.trim(),
           problem_id: editProblemId || undefined,
@@ -191,11 +198,11 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           infrastructure_ids: editInfraIds,
         });
       } else if (component === 'architecture') {
-        await api.updateArchitecture(id, { title: editTitle.trim(), description: editDescription.trim() });
+        return api.updateArchitecture(id, { title: editTitle.trim(), description: editDescription.trim() });
       } else if (component === 'infrastructure') {
-        await api.updateInfrastructure(id, { title: editTitle.trim(), description: editDescription.trim() });
-      } else if (component === 'apps') {
-        await api.updateApp(id, {
+        return api.updateInfrastructure(id, { title: editTitle.trim(), description: editDescription.trim() });
+      } else {
+        return api.updateApp(id, {
           title: editTitle.trim(),
           description: editDescription.trim(),
           solution_id: editSolutionId || undefined,
@@ -203,15 +210,28 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           live_url: editLiveUrl.trim() || undefined,
         });
       }
+    },
+  });
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTitle.trim() || !editDescription.trim()) {
+      return;
+    }
+    setError('');
+    try {
+      await updateMutation.mutateAsync();
       setIsEditing(false);
-      await loadEntity();
+      queryClient.invalidateQueries({ queryKey: [component, id] });
+      if (component === 'solutions' || component === 'apps') {
+        queryClient.invalidateQueries({ queryKey: ['detail-lookups'] });
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('Failed to update details');
       }
-      setLoading(false);
     }
   };
 
@@ -270,7 +290,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     }
   };
 
-  if (loading && !isEditing) {
+  if (isLoading && !isEditing) {
     return (
       <div className="telemetry-loader">
         <div className="loader-orbit"></div>
@@ -279,11 +299,11 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     );
   }
 
-  if (error && !isEditing) {
+  if ((error || queryError) && !isEditing) {
     return (
       <div className="error-container" style={{ padding: '2rem', maxWidth: '600px', margin: '4rem auto', border: '1px solid var(--accent-problem)', background: 'var(--bg-secondary)' }}>
         <h3 style={{ color: 'var(--accent-problem)', textTransform: 'uppercase', marginBottom: '1rem' }}>⚠ Error Syncing Node</h3>
-        <p className="error-banner">{error}</p>
+        <p className="error-banner">{error || (queryError as Error).message}</p>
         <button onClick={() => onNavigate('/')} className="submit-btn" style={{ borderColor: 'var(--accent-problem)', color: 'var(--accent-problem)', background: 'transparent' }}>
           ← Return to Dashboard
         </button>
@@ -295,9 +315,15 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     <div className="detail-page-container">
       {/* Header telemetry info */}
       <div className="detail-nav-header">
-        <button onClick={() => onNavigate('/')} className="back-link">
-          <span className="arrow">←</span> BACK TO DASHBOARD
-        </button>
+        {component === 'solutions' && solutionData?.problem ? (
+          <button onClick={() => onNavigate(`/problems/${solutionData.problem!.id}`)} className="back-link">
+            <span className="arrow">←</span> BACK TO PROBLEM
+          </button>
+        ) : (
+          <button onClick={() => onNavigate('/')} className="back-link">
+            <span className="arrow">←</span> BACK TO DASHBOARD
+          </button>
+        )}
         <div className="telemetry-node-info">
           <span className="telemetry-label">SYSTEM_NODE // </span>
           <span className="telemetry-value" style={{ color: getComponentBadgeColor() }}>
@@ -317,7 +343,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   <button type="button" onClick={() => setIsEditing(false)} className="cancel-edit-btn">
                     Cancel
                   </button>
-                  <button type="submit" className="save-edit-btn">
+                  <button type="submit" className="save-edit-btn" disabled={updateMutation.isPending}>
                     Save Nodes
                   </button>
                 </div>
@@ -455,7 +481,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                       problemId={problemData.id}
                       problemTitle={problemData.title}
                       solutions={problemSolutions}
-                      onChanged={reloadProblemSolutions}
+                      onChanged={() => queryClient.invalidateQueries({ queryKey: ['problems', problemData.id] })}
                       onNavigate={onNavigate}
                     />
                   )}

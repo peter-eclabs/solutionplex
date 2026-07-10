@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Architecture } from '../api/client';
 import { DeleteButton } from './DeleteButton';
@@ -10,36 +11,23 @@ interface ArchitectureTabProps {
 }
 
 export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabProps) {
-  const [archs, setArchs] = useState<Architecture[]>([]);
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
-  const loadArchs = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getArchitectures(searchQuery);
-      setArchs(data);
-      setError('');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to load architectures');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery]);
+  const { data: archs = [], isLoading: loading, error: queryError } = useQuery<Architecture[]>({
+    queryKey: ['architectures', searchQuery],
+    queryFn: () => api.getArchitectures(searchQuery),
+  });
 
-  useEffect(() => {
-    loadArchs();
-  }, [loadArchs]);
+  const createMutation = useMutation({
+    mutationFn: (input: { title: string; description: string }) => api.createArchitecture(input),
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +35,12 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
       return;
     }
     try {
-      await api.createArchitecture({ title: title.trim(), description: description.trim() });
+      await createMutation.mutateAsync({ title: title.trim(), description: description.trim() });
       setTitle('');
       setDescription('');
       setIsFormOpen(false);
-      loadArchs();
+      setError('');
+      queryClient.invalidateQueries({ queryKey: ['architectures'] });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -109,10 +98,12 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
         </div>
       )}
 
-      <section className="list-panel">
-        {loading ? (
-          <p className="status-text">Loading architectures...</p>
-        ) : (
+        <section className="list-panel">
+          {loading ? (
+            <p className="status-text">Loading architectures...</p>
+          ) : queryError ? (
+            <div className="error-banner">{(queryError as Error).message || 'Failed to load architectures'}</div>
+          ) : (
           <div className="cards-grid">
             <article
               className="entity-card add-card-trigger btn-arch"
@@ -149,7 +140,7 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                 <DeleteButton
                   entityLabel="Architecture"
                   onDelete={() => api.deleteArchitecture(a.id)}
-                  onDeleted={loadArchs}
+                  onDeleted={() => queryClient.invalidateQueries({ queryKey: ['architectures'] })}
                 />
                 <div className="card-header">
                   <h4>{a.title}</h4>
