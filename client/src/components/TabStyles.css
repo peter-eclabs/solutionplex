@@ -88,6 +88,12 @@
   width: 100%;
 }
 
+.form-field textarea {
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
 .form-field input::placeholder,
 .form-field textarea::placeholder {
   color: var(--text-muted);
@@ -842,7 +848,7 @@
   background-color: var(--bg-primary);
   border: 1px solid var(--border-grid);
   border-radius: var(--radius-md);
-  max-height: 400px;
+  max-height: 750px;
   overflow-y: auto;
   white-space: pre-wrap;
   font-size: 0.85rem;
