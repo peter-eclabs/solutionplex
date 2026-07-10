@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
-from server.schemas.models import InfrastructureCreate, InfrastructureResponse
+from server.schemas.models import InfrastructureCreate, InfrastructureResponse, InfrastructureUpdate
 from server.services import infrastructures as service
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,31 @@ async def get_infrastructure(id: str):
         raise
     except Exception as e:
         logger.exception(f"Failed to retrieve infrastructure {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.put(
+    "/{id}",
+    response_model=InfrastructureResponse,
+    summary="Update an Infrastructure card",
+    description="Updates the title and/or description of an Infrastructure card.",
+)
+async def update_infrastructure(id: str, data: InfrastructureUpdate):
+    try:
+        doc = await service.update_infrastructure(id, data)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Infrastructure not found",
+            )
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to update infrastructure {id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

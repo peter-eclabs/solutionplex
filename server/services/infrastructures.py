@@ -4,7 +4,7 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
-from server.schemas.models import InfrastructureCreate
+from server.schemas.models import InfrastructureCreate, InfrastructureUpdate
 
 
 async def create_infrastructure(data: InfrastructureCreate) -> dict:
@@ -35,3 +35,24 @@ async def list_infrastructures(q: Optional[str] = None) -> List[dict]:
         }
     cursor = client.infrastructures_col.find(filter_query)
     return await cursor.to_list(length=100)
+
+
+async def update_infrastructure(infra_id: str, data: InfrastructureUpdate) -> Optional[dict]:
+    if not ObjectId.is_valid(infra_id):
+        return None
+    existing = await client.infrastructures_col.find_one({"_id": ObjectId(infra_id)})
+    if not existing:
+        return None
+
+    update_fields = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
+    if not update_fields:
+        return existing
+
+    update_fields["updated_at"] = datetime.utcnow()
+    await client.infrastructures_col.update_one(
+        {"_id": ObjectId(infra_id)}, {"$set": update_fields}
+    )
+    updated = await client.infrastructures_col.find_one({"_id": ObjectId(infra_id)})
+    return updated

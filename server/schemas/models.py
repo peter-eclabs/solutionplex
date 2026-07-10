@@ -47,6 +47,11 @@ class ProblemCreate(BaseModel):
     description: str = Field(..., min_length=1)
 
 
+class ProblemUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+
+
 class ProblemResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
@@ -68,6 +73,11 @@ class ArchitectureCreate(BaseModel):
     description: str = Field(..., min_length=1)
 
 
+class ArchitectureUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+
+
 class ArchitectureResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
     title: str
@@ -86,6 +96,11 @@ class ArchitectureResponse(BaseModel):
 class InfrastructureCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=1)
+
+
+class InfrastructureUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
 
 
 class InfrastructureResponse(BaseModel):
@@ -109,6 +124,14 @@ class SolutionCreate(BaseModel):
     problem_id: str
     architecture_ids: List[str] = []
     infrastructure_ids: List[str] = []
+
+
+class SolutionUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+    problem_id: Optional[str] = None
+    architecture_ids: Optional[List[str]] = None
+    infrastructure_ids: Optional[List[str]] = None
 
 
 class SolutionResponse(BaseModel):
@@ -135,6 +158,14 @@ class AppCreate(BaseModel):
     github_url: str = Field(..., min_length=1)
     live_url: Optional[str] = None
     problem_id: str
+
+
+class AppUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+    github_url: Optional[str] = Field(None, min_length=1)
+    live_url: Optional[str] = None
+    problem_id: Optional[str] = None
 
 
 class AppResponse(BaseModel):

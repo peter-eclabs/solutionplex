@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
-from server.schemas.models import SolutionCreate, SolutionResponse
+from server.schemas.models import SolutionCreate, SolutionResponse, SolutionUpdate
 from server.services import solutions as service
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,34 @@ async def get_solution(id: str):
         raise
     except Exception as e:
         logger.exception(f"Failed to retrieve solution {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.put(
+    "/{id}",
+    response_model=SolutionResponse,
+    summary="Update a Solution card",
+    description="Updates the title, description, or linked references of a Solution card.",
+)
+async def update_solution(id: str, data: SolutionUpdate):
+    try:
+        doc = await service.update_solution(id, data)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Solution not found"
+            )
+        return doc
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to update solution {id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

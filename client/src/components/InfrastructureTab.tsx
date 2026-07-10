@@ -5,14 +5,19 @@ import './TabStyles.css';
 
 interface InfrastructureTabProps {
   searchQuery: string;
+  onCardClick: (id: string) => void;
 }
 
-export function InfrastructureTab({ searchQuery }: InfrastructureTabProps) {
+export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTabProps) {
   const [infras, setInfras] = useState<Infrastructure[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const previewDescription = (text: string, max = 140): string =>
+    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const loadInfras = useCallback(async () => {
     try {
@@ -44,6 +49,7 @@ export function InfrastructureTab({ searchQuery }: InfrastructureTabProps) {
       await api.createInfrastructure({ title: title.trim(), description: description.trim() });
       setTitle('');
       setDescription('');
+      setIsFormOpen(false);
       loadInfras();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -56,37 +62,61 @@ export function InfrastructureTab({ searchQuery }: InfrastructureTabProps) {
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel">
-        <h3>Add Infrastructure</h3>
-        {error && <div className="error-banner">{error}</div>}
-        <form onSubmit={handleSubmit} className="crud-form">
-          <div className="form-field">
-            <label htmlFor="infra-title">Stack Name</label>
-            <input
-              id="infra-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="e.g. AWS Elasticache Redis Cluster"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="infra-desc">Description</label>
-            <textarea
-              id="infra-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              placeholder="Detailed specifications..."
-              rows={4}
-            />
-          </div>
-          <button type="submit" className="submit-btn" disabled={!title.trim() || !description.trim()}>
-            Create Infrastructure Card
-          </button>
-        </form>
+      <aside className="creation-panel collapsed">
+        <button
+          type="button"
+          className="open-form-btn btn-infra"
+          onClick={() => setIsFormOpen(true)}
+        >
+          <span>+</span> Create Infrastructure Card
+        </button>
       </aside>
+
+      {isFormOpen && (
+        <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <aside className="creation-panel">
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsFormOpen(false)}
+                aria-label="Close form"
+              >
+                &times;
+              </button>
+              <h3>Add Infrastructure</h3>
+              {error && <div className="error-banner">{error}</div>}
+              <form onSubmit={handleSubmit} className="crud-form">
+                <div className="form-field">
+                  <label htmlFor="infra-title">Stack Name</label>
+                  <input
+                    id="infra-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. AWS Elasticache Redis Cluster"
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="infra-desc">Description</label>
+                  <textarea
+                    id="infra-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                    placeholder="Detailed specifications..."
+                    rows={4}
+                  />
+                </div>
+                <button type="submit" className="submit-btn" disabled={!title.trim() || !description.trim()}>
+                  Create Infrastructure Card
+                </button>
+              </form>
+            </aside>
+          </div>
+        </div>
+      )}
 
       <section className="list-panel">
         {loading ? (
@@ -96,14 +126,28 @@ export function InfrastructureTab({ searchQuery }: InfrastructureTabProps) {
         ) : (
           <div className="cards-grid">
             {infras.map((i) => (
-              <article key={i.id} className="entity-card">
+              <article
+                key={i.id}
+                className="entity-card infra-card"
+                onClick={() => onCardClick(i.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCardClick(i.id);
+                  }
+                }}
+              >
                 <div className="card-header">
                   <h4>{i.title}</h4>
                   <span className="card-timestamp">
                     {new Date(i.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc">{i.description}</p>
+                <p className="card-desc card-desc-preview">
+                  {previewDescription(i.description)}
+                </p>
               </article>
             ))}
           </div>

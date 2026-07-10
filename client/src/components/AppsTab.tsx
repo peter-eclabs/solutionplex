@@ -5,9 +5,11 @@ import './TabStyles.css';
 
 interface AppsTabProps {
   searchQuery: string;
+  onCardClick: (id: string) => void;
+  onCardClickProblem: (id: string) => void;
 }
 
-export function AppsTab({ searchQuery }: AppsTabProps) {
+export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTabProps) {
   const [apps, setApps] = useState<AppPrototype[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   
@@ -23,6 +25,10 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const previewDescription = (text: string, max = 140): string =>
+    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const loadProblems = useCallback(async () => {
     try {
@@ -82,6 +88,7 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
       setLiveUrl('');
       setSelectedProblemId('');
       setError('');
+      setIsFormOpen(false);
       loadApps();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -119,81 +126,105 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel">
-        <h3>Register Prototype</h3>
-        {error && <div className="error-banner">{error}</div>}
-        <form onSubmit={handleSubmit} className="crud-form">
-          <div className="form-field">
-            <label htmlFor="app-title">App Name</label>
-            <input
-              id="app-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="e.g. Cache Monitor Admin"
-            />
-          </div>
-          
-          <div className="form-field">
-            <label htmlFor="app-desc">Description</label>
-            <textarea
-              id="app-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              placeholder="Core features and target users..."
-              rows={4}
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="app-problem">Problem Statement (1:1)</label>
-            <select
-              id="app-problem"
-              value={selectedProblemId}
-              onChange={(e) => setSelectedProblemId(e.target.value)}
-              required
-            >
-              <option value="">-- Select Problem Target --</option>
-              {problems.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="app-github">GitHub Repository URL (Required)</label>
-            <input
-              id="app-github"
-              type="url"
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              required
-              placeholder="https://github.com/owner/repo"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="app-live">Live Deployed URL (Optional)</label>
-            <input
-              id="app-live"
-              type="url"
-              value={liveUrl}
-              onChange={(e) => setLiveUrl(e.target.value)}
-              placeholder="https://myprototype.vercel.app"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={!title.trim() || !description.trim() || !githubUrl.trim() || !selectedProblemId}
-          >
-            Create App Card
-          </button>
-        </form>
+      <aside className="creation-panel collapsed">
+        <button
+          type="button"
+          className="open-form-btn btn-app"
+          onClick={() => setIsFormOpen(true)}
+        >
+          <span>+</span> Create App Card
+        </button>
       </aside>
+
+      {isFormOpen && (
+        <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <aside className="creation-panel">
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsFormOpen(false)}
+                aria-label="Close form"
+              >
+                &times;
+              </button>
+              <h3>Register Prototype</h3>
+              {error && <div className="error-banner">{error}</div>}
+              <form onSubmit={handleSubmit} className="crud-form">
+                <div className="form-field">
+                  <label htmlFor="app-title">App Name</label>
+                  <input
+                    id="app-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Cache Monitor Admin"
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <label htmlFor="app-desc">Description</label>
+                  <textarea
+                    id="app-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                    placeholder="Core features and target users..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="app-problem">Problem Statement (1:1)</label>
+                  <select
+                    id="app-problem"
+                    value={selectedProblemId}
+                    onChange={(e) => setSelectedProblemId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Select Problem Target --</option>
+                    {problems.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="app-github">GitHub Repository URL (Required)</label>
+                  <input
+                    id="app-github"
+                    type="url"
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    required
+                    placeholder="https://github.com/owner/repo"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="app-live">Live Deployed URL (Optional)</label>
+                  <input
+                    id="app-live"
+                    type="url"
+                    value={liveUrl}
+                    onChange={(e) => setLiveUrl(e.target.value)}
+                    placeholder="https://myprototype.vercel.app"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="submit-btn"
+                  disabled={!title.trim() || !description.trim() || !githubUrl.trim() || !selectedProblemId}
+                >
+                  Create App Card
+                </button>
+              </form>
+            </aside>
+          </div>
+        </div>
+      )}
 
       <section className="list-panel">
         {loading ? (
@@ -203,23 +234,47 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
         ) : (
           <div className="cards-grid">
             {apps.map((app) => (
-              <article key={app.id} className="entity-card">
+              <article
+                key={app.id}
+                className="entity-card app-card"
+                onClick={() => onCardClick(app.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCardClick(app.id);
+                  }
+                }}
+              >
                 <div className="card-header">
                   <div>
                     <h4>{app.title}</h4>
                     {app.problem && (
                       <div style={{ marginTop: '0.5rem' }}>
-                        <span className="relation-tag solution-tag">For: {app.problem.title}</span>
+                        <span
+                          className="relation-tag solution-tag"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCardClickProblem(app.problem!.id);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          For: {app.problem.title}
+                        </span>
                       </div>
                     )}
                   </div>
                   <span className="card-timestamp">{new Date(app.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="card-desc">{app.description}</p>
-                
+                <p className="card-desc card-desc-preview">{previewDescription(app.description)}</p>
+
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                   <button
-                    onClick={() => handleToggleReadme(app.id, app.github_url)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleReadme(app.id, app.github_url);
+                    }}
                     className="submit-btn"
                     style={{
                       background: 'var(--bg-tertiary)',
@@ -232,11 +287,12 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
                   >
                     {expandedReadmeAppId === app.id ? (readmeLoading ? 'Loading...' : 'Hide README') : 'Show README'}
                   </button>
-                  
+
                   <a
                     href={app.github_url}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="submit-btn"
                     style={{
                       display: 'inline-flex',
@@ -258,6 +314,7 @@ export function AppsTab({ searchQuery }: AppsTabProps) {
                       href={app.live_url}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="submit-btn"
                       style={{
                         display: 'inline-flex',

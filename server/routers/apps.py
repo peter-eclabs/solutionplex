@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
-from server.schemas.models import AppCreate, AppResponse
+from server.schemas.models import AppCreate, AppResponse, AppUpdate
 from server.services import apps as service
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,34 @@ async def fetch_readme(github_url: str):
         raise
     except Exception as e:
         logger.exception("Failed to fetch README")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.put(
+    "/{id}",
+    response_model=AppResponse,
+    summary="Update an App card",
+    description="Updates the title, description, URLs, or linked problem of an App card.",
+)
+async def update_app(id: str, data: AppUpdate):
+    try:
+        doc = await service.update_app(id, data)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="App not found"
+            )
+        return doc
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to update app {id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

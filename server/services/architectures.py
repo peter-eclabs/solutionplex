@@ -4,7 +4,7 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
-from server.schemas.models import ArchitectureCreate
+from server.schemas.models import ArchitectureCreate, ArchitectureUpdate
 
 
 async def create_architecture(data: ArchitectureCreate) -> dict:
@@ -33,3 +33,25 @@ async def list_architectures(q: Optional[str] = None) -> List[dict]:
         }
     cursor = client.architectures_col.find(filter_query)
     return await cursor.to_list(length=100)
+
+
+async def update_architecture(arch_id: str, data: ArchitectureUpdate) -> Optional[dict]:
+    if not ObjectId.is_valid(arch_id):
+        return None
+    existing = await client.architectures_col.find_one({"_id": ObjectId(arch_id)})
+    if not existing:
+        return None
+
+    update_fields = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
+    if not update_fields:
+        existing["updated_at"] = existing.get("updated_at")
+        return existing
+
+    update_fields["updated_at"] = datetime.utcnow()
+    await client.architectures_col.update_one(
+        {"_id": ObjectId(arch_id)}, {"$set": update_fields}
+    )
+    updated = await client.architectures_col.find_one({"_id": ObjectId(arch_id)})
+    return updated

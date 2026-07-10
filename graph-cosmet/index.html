@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolutionPlex - Interactive Graph Explorer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background glow elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="network" class="logo-icon"></i>
+                    <span>Solution<span>Plex</span></span>
+                </div>
+                <p class="tagline">Explore Problems & Architectures</p>
+            </div>
+
+            <nav class="problem-list-container">
+                <h3><i data-lucide="alert-circle"></i> Select a Problem</h3>
+                <ul class="problem-list" id="problem-list">
+                    <!-- Dynamic Problem items loaded here -->
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="legend">
+                    <h4>Legend</h4>
+                    <div class="legend-item"><span class="legend-dot color-problem"></span> Problem</div>
+                    <div class="legend-item"><span class="legend-dot color-solution"></span> Solution</div>
+                    <div class="legend-item"><span class="legend-dot color-architecture"></span> Architecture</div>
+                    <div class="legend-item"><span class="legend-dot color-infrastructure"></span> Infrastructure</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header / Status Bar -->
+            <header class="workspace-header">
+                <div class="breadcrumbs">
+                    <span id="breadcrumb-root" class="breadcrumb-item active"><i data-lucide="home"></i> Explorer</span>
+                    <span id="breadcrumb-problem" class="breadcrumb-item"></span>
+                    <span id="breadcrumb-solution" class="breadcrumb-item"></span>
+                </div>
+                <div class="actions">
+                    <button id="btn-reset" class="btn btn-secondary" title="Reset View">
+                        <i data-lucide="refresh-cw"></i> Reset Graph
+                    </button>
+                </div>
+            </header>
+
+            <!-- Graph Canvas -->
+            <div class="graph-viewport" id="graph-viewport">
+                <div class="viewport-instructions">
+                    <i data-lucide="info"></i> Click on nodes to explore solutions, architectures, and infrastructures.
+                </div>
+                
+                <!-- Main SVG element for lines and nodes -->
+                <svg class="graph-svg" id="graph-svg" width="100%" height="100%">
+                    <defs>
+                        <!-- Glow filter for lines and nodes -->
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="6" result="blur" />
+                            <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                        
+                        <!-- Line Gradients -->
+                        <linearGradient id="grad-prob-sol" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#0ea5e9" />
+                            <stop offset="100%" stop-color="#10b981" />
+                        </linearGradient>
+                        <linearGradient id="grad-sol-arch" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#10b981" />
+                            <stop offset="100%" stop-color="#a855f7" />
+                        </linearGradient>
+                        <linearGradient id="grad-sol-infra" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#10b981" />
+                            <stop offset="100%" stop-color="#f59e0b" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Group for connection paths -->
+                    <g id="connections-group"></g>
+                    <!-- Group for interactive nodes -->
+                    <g id="nodes-group"></g>
+                </svg>
+
+                <!-- Floating list overlay (rendered dynamically on child node click) -->
+                <div class="floating-panel" id="floating-list-panel">
+                    <div class="floating-panel-header">
+                        <h4 id="floating-panel-title">Architecture Items</h4>
+                        <button id="floating-panel-close"><i data-lucide="x"></i></button>
+                    </div>
+                    <ul class="floating-panel-list" id="floating-panel-list">
+                        <!-- Loaded dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Detail Panel -->
+        <aside class="detail-sidebar" id="detail-sidebar">
+            <div class="detail-sidebar-placeholder" id="detail-placeholder">
+                <i data-lucide="mouse-pointer-click" class="placeholder-icon"></i>
+                <h3>Select a Node</h3>
+                <p>Click on any node in the graph to view detailed technical specifications, use-cases, and configurations.</p>
+            </div>
+            
+            <div class="detail-sidebar-content hidden" id="detail-content">
+                <div class="detail-badge" id="detail-type-badge">Solution</div>
+                <h2 class="detail-title" id="detail-title">GPU-Accelerated Order Matching</h2>
+                <p class="detail-desc" id="detail-desc">Provides sub-microsecond matching latency by processing limit order books in parallel on GPU execution threads.</p>
+                
+                <div class="detail-section" id="detail-section-specs">
+                    <h3>Key Attributes</h3>
+                    <ul class="detail-attributes" id="detail-attributes">
+                        <!-- Dynamic list -->
+                    </ul>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Metadata</h3>
+                    <div class="metadata-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">Complexity</span>
+                            <span class="meta-value" id="meta-complexity">High</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Reliability</span>
+                            <span class="meta-value" id="meta-reliability">99.999%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Main Logic script -->
+    <script src="app.js"></script>
+</body>
+</html>

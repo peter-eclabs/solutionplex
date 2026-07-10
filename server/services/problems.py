@@ -4,7 +4,7 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
-from server.schemas.models import ProblemCreate
+from server.schemas.models import ProblemCreate, ProblemUpdate
 
 
 async def create_problem(data: ProblemCreate) -> dict:
@@ -53,3 +53,23 @@ async def list_problems(q: Optional[str] = None) -> List[dict]:
             {"id": str(s["_id"]), "title": s["title"]} for s in solutions
         ]
     return problems
+
+
+async def update_problem(problem_id: str, data: ProblemUpdate) -> Optional[dict]:
+    if not ObjectId.is_valid(problem_id):
+        return None
+    existing = await client.problems_col.find_one({"_id": ObjectId(problem_id)})
+    if not existing:
+        return None
+
+    update_fields = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
+    if not update_fields:
+        return await get_problem(problem_id)
+
+    update_fields["updated_at"] = datetime.utcnow()
+    await client.problems_col.update_one(
+        {"_id": ObjectId(problem_id)}, {"$set": update_fields}
+    )
+    return await get_problem(problem_id)

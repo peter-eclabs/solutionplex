@@ -86,27 +86,42 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Problem endpoints
   getProblems: (q?: string) => request<Problem[]>(`/api/problems/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  createProblem: (data: { title: string; description: string }) => 
+  getProblem: (id: string) => request<Problem>(`/api/problems/${id}`),
+  createProblem: (data: { title: string; description: string }) =>
     request<Problem>('/api/problems/', { method: 'POST', body: JSON.stringify(data) }),
+  updateProblem: (id: string, data: { title?: string; description?: string }) =>
+    request<Problem>(`/api/problems/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Architecture endpoints
   getArchitectures: (q?: string) => request<Architecture[]>(`/api/architectures/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  createArchitecture: (data: { title: string; description: string }) => 
+  getArchitecture: (id: string) => request<Architecture>(`/api/architectures/${id}`),
+  createArchitecture: (data: { title: string; description: string }) =>
     request<Architecture>('/api/architectures/', { method: 'POST', body: JSON.stringify(data) }),
+  updateArchitecture: (id: string, data: { title?: string; description?: string }) =>
+    request<Architecture>(`/api/architectures/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Infrastructure endpoints
   getInfrastructures: (q?: string) => request<Infrastructure[]>(`/api/infrastructures/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  createInfrastructure: (data: { title: string; description: string }) => 
+  getInfrastructure: (id: string) => request<Infrastructure>(`/api/infrastructures/${id}`),
+  createInfrastructure: (data: { title: string; description: string }) =>
     request<Infrastructure>('/api/infrastructures/', { method: 'POST', body: JSON.stringify(data) }),
+  updateInfrastructure: (id: string, data: { title?: string; description?: string }) =>
+    request<Infrastructure>(`/api/infrastructures/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Solution endpoints
   getSolutions: (q?: string) => request<Solution[]>(`/api/solutions/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  createSolution: (data: { title: string; description: string; problem_id: string; architecture_ids: string[]; infrastructure_ids: string[] }) => 
+  getSolution: (id: string) => request<Solution>(`/api/solutions/${id}`),
+  createSolution: (data: { title: string; description: string; problem_id: string; architecture_ids: string[]; infrastructure_ids: string[] }) =>
     request<Solution>('/api/solutions/', { method: 'POST', body: JSON.stringify(data) }),
+  updateSolution: (id: string, data: { title?: string; description?: string; problem_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
+    request<Solution>(`/api/solutions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // App endpoints
   getApps: (q?: string) => request<AppPrototype[]>(`/api/apps/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
-  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; problem_id: string }) => 
+  getApp: (id: string) => request<AppPrototype>(`/api/apps/${id}`),
+  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; problem_id: string }) =>
     request<AppPrototype>('/api/apps/', { method: 'POST', body: JSON.stringify(data) }),
+  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; problem_id?: string }) =>
+    request<AppPrototype>(`/api/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getReadme: (githubUrl: string) => request<{ readme_content: string }>(`/api/apps/readme?github_url=${encodeURIComponent(githubUrl)}`),
 };

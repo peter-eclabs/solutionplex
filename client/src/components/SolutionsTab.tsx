@@ -5,9 +5,19 @@ import './TabStyles.css';
 
 interface SolutionsTabProps {
   searchQuery: string;
+  onCardClick: (id: string) => void;
+  onCardClickProblem: (id: string) => void;
+  onCardClickArch: (id: string) => void;
+  onCardClickInfra: (id: string) => void;
 }
 
-export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
+export function SolutionsTab({
+  searchQuery,
+  onCardClick,
+  onCardClickProblem,
+  onCardClickArch,
+  onCardClickInfra,
+}: SolutionsTabProps) {
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [architectures, setArchitectures] = useState<Architecture[]>([]);
@@ -21,6 +31,10 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const previewDescription = (text: string, max = 140): string =>
+    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const loadRelations = useCallback(async () => {
     try {
@@ -102,6 +116,7 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
       setSelectedArchIds([]);
       setSelectedInfraIds([]);
       setError('');
+      setIsFormOpen(false);
       loadSolutions();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -114,104 +129,128 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel">
-        <h3>Propose Solution</h3>
-        {error && <div className="error-banner">{error}</div>}
-        <form onSubmit={handleSubmit} className="crud-form">
-          <div className="form-field">
-            <label htmlFor="sol-title">Solution Title</label>
-            <input
-              id="sol-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="e.g. Distributed Redis Session Store"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="sol-desc">Description</label>
-            <textarea
-              id="sol-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              placeholder="Technical architecture details..."
-              rows={4}
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="sol-problem">Problem Statement (1:1)</label>
-            <select
-              id="sol-problem"
-              value={selectedProblemId}
-              onChange={(e) => setSelectedProblemId(e.target.value)}
-              required
-            >
-              <option value="">-- Select Problem Target --</option>
-              {problems.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label>Architecture Designs (1:N)</label>
-            <div className="checkbox-select-list">
-              {architectures.length === 0 ? (
-                <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                  No architectures available
-                </span>
-              ) : (
-                architectures.map((arch) => (
-                  <label key={arch.id} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedArchIds.includes(arch.id)}
-                      onChange={(e) => handleArchCheckbox(arch.id, e.target.checked)}
-                    />
-                    {arch.title}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="form-field">
-            <label>Infrastructure Stacks (1:N)</label>
-            <div className="checkbox-select-list">
-              {infrastructures.length === 0 ? (
-                <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                  No infrastructure available
-                </span>
-              ) : (
-                infrastructures.map((infra) => (
-                  <label key={infra.id} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedInfraIds.includes(infra.id)}
-                      onChange={(e) => handleInfraCheckbox(infra.id, e.target.checked)}
-                    />
-                    {infra.title}
-                  </label>
-                ))
-              )}
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={!title.trim() || !description.trim() || !selectedProblemId}
-          >
-            Propose Solution Card
-          </button>
-        </form>
+      <aside className="creation-panel collapsed">
+        <button
+          type="button"
+          className="open-form-btn btn-solution"
+          onClick={() => setIsFormOpen(true)}
+        >
+          <span>+</span> Propose Solution Card
+        </button>
       </aside>
+
+      {isFormOpen && (
+        <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <aside className="creation-panel">
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsFormOpen(false)}
+                aria-label="Close form"
+              >
+                &times;
+              </button>
+              <h3>Propose Solution</h3>
+              {error && <div className="error-banner">{error}</div>}
+              <form onSubmit={handleSubmit} className="crud-form">
+                <div className="form-field">
+                  <label htmlFor="sol-title">Solution Title</label>
+                  <input
+                    id="sol-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Distributed Redis Session Store"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="sol-desc">Description</label>
+                  <textarea
+                    id="sol-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                    placeholder="Technical architecture details..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="sol-problem">Problem Statement (1:1)</label>
+                  <select
+                    id="sol-problem"
+                    value={selectedProblemId}
+                    onChange={(e) => setSelectedProblemId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Select Problem Target --</option>
+                    {problems.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label>Architecture Designs (1:N)</label>
+                  <div className="checkbox-select-list">
+                    {architectures.length === 0 ? (
+                      <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
+                        No architectures available
+                      </span>
+                    ) : (
+                      architectures.map((arch) => (
+                        <label key={arch.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedArchIds.includes(arch.id)}
+                            onChange={(e) => handleArchCheckbox(arch.id, e.target.checked)}
+                          />
+                          {arch.title}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>Infrastructure Stacks (1:N)</label>
+                  <div className="checkbox-select-list">
+                    {infrastructures.length === 0 ? (
+                      <span className="status-text" style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
+                        No infrastructure available
+                      </span>
+                    ) : (
+                      infrastructures.map((infra) => (
+                        <label key={infra.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedInfraIds.includes(infra.id)}
+                            onChange={(e) => handleInfraCheckbox(infra.id, e.target.checked)}
+                          />
+                          {infra.title}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="submit-btn"
+                  disabled={!title.trim() || !description.trim() || !selectedProblemId}
+                >
+                  Propose Solution Card
+                </button>
+              </form>
+            </aside>
+          </div>
+        </div>
+      )}
 
       <section className="list-panel">
         {loading ? (
@@ -221,20 +260,39 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
         ) : (
           <div className="cards-grid">
             {solutions.map((s) => (
-              <article key={s.id} className="entity-card">
+              <article
+                key={s.id}
+                className="entity-card solution-card"
+                onClick={() => onCardClick(s.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCardClick(s.id);
+                  }
+                }}
+              >
                 <div className="card-header">
                   <h4>{s.title}</h4>
                   <span className="card-timestamp">
                     {new Date(s.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc">{s.description}</p>
+                <p className="card-desc card-desc-preview">{previewDescription(s.description)}</p>
 
                 <div className="card-relations">
                   {s.problem && (
                     <div style={{ marginBottom: '0.75rem' }}>
                       <h5>Addresses Problem</h5>
-                      <span className="relation-tag" style={{ color: 'var(--text-primary)' }}>
+                      <span
+                        className="relation-tag prob-tag"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCardClickProblem(s.problem!.id);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
                         {s.problem.title}
                       </span>
                     </div>
@@ -245,7 +303,15 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
                       <h5>Architectures Used</h5>
                       <div className="relation-list">
                         {s.architectures.map((a) => (
-                          <span key={a.id} className="relation-tag arch-tag">
+                          <span
+                            key={a.id}
+                            className="relation-tag arch-tag"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCardClickArch(a.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
                             {a.title}
                           </span>
                         ))}
@@ -258,7 +324,15 @@ export function SolutionsTab({ searchQuery }: SolutionsTabProps) {
                       <h5>Infrastructure Deployed</h5>
                       <div className="relation-list">
                         {s.infrastructures.map((i) => (
-                          <span key={i.id} className="relation-tag infra-tag">
+                          <span
+                            key={i.id}
+                            className="relation-tag infra-tag"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCardClickInfra(i.id);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
                             {i.title}
                           </span>
                         ))}

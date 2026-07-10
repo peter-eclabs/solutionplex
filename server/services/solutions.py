@@ -4,7 +4,7 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
-from server.schemas.models import SolutionCreate
+from server.schemas.models import SolutionCreate, SolutionUpdate
 
 
 async def create_solution(data: SolutionCreate) -> dict:
@@ -107,3 +107,60 @@ async def list_solutions(q: Optional[str] = None) -> List[dict]:
     for s in solutions:
         resolved_list.append(await populate_solution(s))
     return resolved_list
+
+
+async def update_solution(solution_id: str, data: SolutionUpdate) -> Optional[dict]:
+    if not ObjectId.is_valid(solution_id):
+        return None
+    existing = await client.solutions_col.find_one({"_id": ObjectId(solution_id)})
+    if not existing:
+        return None
+
+    update_fields = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
+
+    if "problem_id" in update_fields:
+        if not ObjectId.is_valid(update_fields["problem_id"]):
+            raise ValueError("Invalid problem_id")
+        prob = await client.problems_col.find_one(
+            {"_id": ObjectId(update_fields["problem_id"])}
+        )
+        if not prob:
+            raise ValueError("Associated Problem not found")
+        update_fields["problem_id"] = ObjectId(update_fields["problem_id"])
+
+    if "architecture_ids" in update_fields:
+        arch_object_ids = []
+        for a_id in update_fields["architecture_ids"]:
+            if not ObjectId.is_valid(a_id):
+                raise ValueError(f"Invalid architecture_id: {a_id}")
+            arch_exists = await client.architectures_col.find_one(
+                {"_id": ObjectId(a_id)}
+            )
+            if not arch_exists:
+                raise ValueError(f"Associated Architecture not found: {a_id}")
+            arch_object_ids.append(ObjectId(a_id))
+        update_fields["architecture_ids"] = arch_object_ids
+
+    if "infrastructure_ids" in update_fields:
+        infra_object_ids = []
+        for i_id in update_fields["infrastructure_ids"]:
+            if not ObjectId.is_valid(i_id):
+                raise ValueError(f"Invalid infrastructure_id: {i_id}")
+            infra_exists = await client.infrastructures_col.find_one(
+                {"_id": ObjectId(i_id)}
+            )
+            if not infra_exists:
+                raise ValueError(f"Associated Infrastructure not found: {i_id}")
+            infra_object_ids.append(ObjectId(i_id))
+        update_fields["infrastructure_ids"] = infra_object_ids
+
+    if not update_fields:
+        return await get_solution(solution_id)
+
+    update_fields["updated_at"] = datetime.utcnow()
+    await client.solutions_col.update_one(
+        {"_id": ObjectId(solution_id)}, {"$set": update_fields}
+    )
+    return await get_solution(solution_id)

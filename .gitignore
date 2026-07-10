@@ -13,6 +13,9 @@ dist/
 .env
 .env.local
 
+# Local MongoDB (extracted binaries + data)
+.mongodb/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -8,7 +8,7 @@ from bson import ObjectId
 import httpx
 
 from server.database import client
-from server.schemas.models import AppCreate
+from server.schemas.models import AppCreate, AppUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,37 @@ async def list_apps(q: Optional[str] = None) -> List[dict]:
     for a in apps:
         resolved_list.append(await populate_app(a))
     return resolved_list
+
+
+async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
+    if not ObjectId.is_valid(app_id):
+        return None
+    existing = await client.apps_col.find_one({"_id": ObjectId(app_id)})
+    if not existing:
+        return None
+
+    update_fields = {
+        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+    }
+
+    if "problem_id" in update_fields:
+        if not ObjectId.is_valid(update_fields["problem_id"]):
+            raise ValueError("Invalid problem_id")
+        prob = await client.problems_col.find_one(
+            {"_id": ObjectId(update_fields["problem_id"])}
+        )
+        if not prob:
+            raise ValueError("Associated Problem not found")
+        update_fields["problem_id"] = ObjectId(update_fields["problem_id"])
+
+    if not update_fields:
+        return await get_app(app_id)
+
+    update_fields["updated_at"] = datetime.utcnow()
+    await client.apps_col.update_one(
+        {"_id": ObjectId(app_id)}, {"$set": update_fields}
+    )
+    return await get_app(app_id)
 
 
 def parse_github_url(url: str) -> tuple[str, str]:

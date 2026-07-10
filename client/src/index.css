@@ -1,27 +1,46 @@
 :root {
-  --bg-primary: #090d16;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --border-subtle: #242f41;
-  --border-hover: #374151;
-  --border-focus: #3b82f6;
+  /* Quantum Blueprint Palette */
+  --bg-primary: #060814;
+  --bg-secondary: #0c1020;
+  --bg-tertiary: #12182d;
   
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --border-grid: #1b2a4a;
+  --border-hover: #334b7a;
+  --border-focus: #00d8f6;
   
-  --accent-blue: #3b82f6;
-  --accent-blue-hover: #2563eb;
-  --accent-green: #10b981;
-  --accent-danger: #ef4444;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
   
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Neon Accents */
+  --accent-cyan: #00d8f6;
+  --accent-cyan-dim: rgba(0, 216, 246, 0.15);
+  --accent-solution: #00f59b;
+  --accent-solution-dim: rgba(0, 245, 155, 0.1);
+  --accent-problem: #ff4d79;
+  --accent-problem-dim: rgba(255, 77, 121, 0.1);
+  --accent-infra: #f59e0b;
+  --accent-infra-dim: rgba(245, 158, 11, 0.1);
+  --accent-arch: #8b5cf6;
+  --accent-arch-dim: rgba(139, 92, 246, 0.1);
+  
+  /* Typography Roles */
+  --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  
+  /* Borders and Curves */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  
+  /* Smooth Animations */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --blueprint-glow: 0 0 15px rgba(0, 216, 246, 0.2);
 }
 
+/* Global Blueprint Background Grid Effect */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -30,11 +49,21 @@
 
 body {
   background-color: var(--bg-primary);
+  background-image: 
+    linear-gradient(rgba(27, 42, 74, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 42, 74, 0.15) 1px, transparent 1px);
+  background-size: 40px 40px;
   color: var(--text-primary);
-  font-family: var(--font-sans);
-  line-height: 1.5;
+  font-family: var(--font-body);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 input, select, textarea, button {
@@ -44,8 +73,34 @@ input, select, textarea, button {
   border: none;
 }
 
-/* Custom styling for focus states */
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-grid);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Visible blueprint styled keyboard focus */
 *:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
+  box-shadow: var(--blueprint-glow);
+}
+
+/* Text selections matching the blueprint cyan theme */
+::selection {
+  background-color: var(--border-focus);
+  color: var(--bg-primary);
 }

@@ -5,14 +5,19 @@ import './TabStyles.css';
 
 interface ArchitectureTabProps {
   searchQuery: string;
+  onCardClick: (id: string) => void;
 }
 
-export function ArchitectureTab({ searchQuery }: ArchitectureTabProps) {
+export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabProps) {
   const [archs, setArchs] = useState<Architecture[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const previewDescription = (text: string, max = 140): string =>
+    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const loadArchs = useCallback(async () => {
     try {
@@ -44,6 +49,7 @@ export function ArchitectureTab({ searchQuery }: ArchitectureTabProps) {
       await api.createArchitecture({ title: title.trim(), description: description.trim() });
       setTitle('');
       setDescription('');
+      setIsFormOpen(false);
       loadArchs();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -56,37 +62,61 @@ export function ArchitectureTab({ searchQuery }: ArchitectureTabProps) {
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel">
-        <h3>Add Architecture</h3>
-        {error && <div className="error-banner">{error}</div>}
-        <form onSubmit={handleSubmit} className="crud-form">
-          <div className="form-field">
-            <label htmlFor="arch-title">Pattern Name</label>
-            <input
-              id="arch-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="e.g. CQRS with Event Sourcing"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="arch-desc">Description</label>
-            <textarea
-              id="arch-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-              placeholder="Details of architectural application..."
-              rows={4}
-            />
-          </div>
-          <button type="submit" className="submit-btn" disabled={!title.trim() || !description.trim()}>
-            Create Architecture Card
-          </button>
-        </form>
+      <aside className="creation-panel collapsed">
+        <button
+          type="button"
+          className="open-form-btn btn-arch"
+          onClick={() => setIsFormOpen(true)}
+        >
+          <span>+</span> Create Architecture Card
+        </button>
       </aside>
+
+      {isFormOpen && (
+        <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <aside className="creation-panel">
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsFormOpen(false)}
+                aria-label="Close form"
+              >
+                &times;
+              </button>
+              <h3>Add Architecture</h3>
+              {error && <div className="error-banner">{error}</div>}
+              <form onSubmit={handleSubmit} className="crud-form">
+                <div className="form-field">
+                  <label htmlFor="arch-title">Pattern Name</label>
+                  <input
+                    id="arch-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. CQRS with Event Sourcing"
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="arch-desc">Description</label>
+                  <textarea
+                    id="arch-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                    placeholder="Details of architectural application..."
+                    rows={4}
+                  />
+                </div>
+                <button type="submit" className="submit-btn" disabled={!title.trim() || !description.trim()}>
+                  Create Architecture Card
+                </button>
+              </form>
+            </aside>
+          </div>
+        </div>
+      )}
 
       <section className="list-panel">
         {loading ? (
@@ -96,14 +126,28 @@ export function ArchitectureTab({ searchQuery }: ArchitectureTabProps) {
         ) : (
           <div className="cards-grid">
             {archs.map((a) => (
-              <article key={a.id} className="entity-card">
+              <article
+                key={a.id}
+                className="entity-card arch-card"
+                onClick={() => onCardClick(a.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onCardClick(a.id);
+                  }
+                }}
+              >
                 <div className="card-header">
                   <h4>{a.title}</h4>
                   <span className="card-timestamp">
                     {new Date(a.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="card-desc">{a.description}</p>
+                <p className="card-desc card-desc-preview">
+                  {previewDescription(a.description)}
+                </p>
               </article>
             ))}
           </div>

@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 
-from server.schemas.models import ProblemCreate, ProblemResponse
+from server.schemas.models import ProblemCreate, ProblemResponse, ProblemUpdate
 from server.services import problems as service
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,30 @@ async def get_problem(id: str):
         raise
     except Exception as e:
         logger.exception(f"Failed to retrieve problem {id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.put(
+    "/{id}",
+    response_model=ProblemResponse,
+    summary="Update a Problem card",
+    description="Updates the title and/or description of a Problem card.",
+)
+async def update_problem(id: str, data: ProblemUpdate):
+    try:
+        doc = await service.update_problem(id, data)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+            )
+        return doc
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Failed to update problem {id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
