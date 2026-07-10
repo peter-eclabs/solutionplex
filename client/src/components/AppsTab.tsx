@@ -7,11 +7,9 @@ import './TabStyles.css';
 interface AppsTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
-  onCardClickProblem: (id: string) => void;
-  onCardClickSolution: (id: string) => void;
 }
 
-export function AppsTab({ searchQuery, onCardClick, onCardClickProblem, onCardClickSolution }: AppsTabProps) {
+export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
   const [apps, setApps] = useState<AppPrototype[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
   
@@ -227,95 +225,10 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem, onCardCl
                 }}
               >
                 <div className="card-header">
-                  <div>
-                    <h4>{app.title}</h4>
-                    {app.problem && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <span
-                          className="relation-tag solution-tag"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCardClickProblem(app.problem!.id);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          For: {app.problem.title}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <span className="card-timestamp">{new Date(app.created_at).toLocaleDateString()}</span>
+                  <h4>{app.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">
                   <MarkdownRenderer content={previewDescription(app.description)} />
-                </div>
-
-                {app.solutions && app.solutions.length > 0 && (
-                  <div className="card-relations" style={{ paddingBottom: '0.75rem' }}>
-                    <h5 style={{ color: 'var(--accent-solution)' }}>Associated Solutions</h5>
-                    <ul className="relation-list">
-                      {app.solutions.map((sol) => (
-                        <li
-                          key={sol.id}
-                          className="relation-tag solution-tag"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCardClickSolution(sol.id);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span>{sol.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                  <a
-                    href={app.github_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="submit-btn"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textDecoration: 'none',
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-subtle)',
-                      marginTop: 0,
-                      padding: '0.35rem 0.75rem',
-                      fontSize: '0.8rem',
-                      borderRadius: 'var(--radius-sm)'
-                    }}
-                  >
-                    GitHub Repo ↗
-                  </a>
-
-                  {app.live_url && (
-                    <a
-                      href={app.live_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="submit-btn"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        textDecoration: 'none',
-                        background: 'var(--accent-blue)',
-                        marginTop: 0,
-                        padding: '0.35rem 0.75rem',
-                        fontSize: '0.8rem',
-                        borderRadius: 'var(--radius-sm)'
-                      }}
-                    >
-                      Launch App ↗
-                    </a>
-                  )}
                 </div>
               </article>
             ))}

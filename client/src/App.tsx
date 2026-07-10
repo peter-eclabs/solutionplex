@@ -121,7 +121,6 @@ export function App() {
                 <ProblemsTab
                   searchQuery={searchQuery}
                   onCardClick={(id) => navigate(`/problems/${id}`)}
-                  onCardClickSolution={(id) => navigate(`/solutions/${id}`)}
                 />
               </div>
             )}
@@ -130,10 +129,6 @@ export function App() {
                 <SolutionsTab
                   searchQuery={searchQuery}
                   onCardClick={(id) => navigate(`/solutions/${id}`)}
-                  onCardClickProblem={(id) => navigate(`/problems/${id}`)}
-                  onCardClickArch={(id) => navigate(`/architecture/${id}`)}
-                  onCardClickInfra={(id) => navigate(`/infrastructure/${id}`)}
-                  onCardClickApp={(id) => navigate(`/apps/${id}`)}
                 />
               </div>
             )}
@@ -158,8 +153,6 @@ export function App() {
                 <AppsTab
                   searchQuery={searchQuery}
                   onCardClick={(id) => navigate(`/apps/${id}`)}
-                  onCardClickProblem={(id) => navigate(`/problems/${id}`)}
-                  onCardClickSolution={(id) => navigate(`/solutions/${id}`)}
                 />
               </div>
             )}
@@ -169,4 +162,3 @@ export function App() {
     </div>
   );
 }
-

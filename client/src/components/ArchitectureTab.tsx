@@ -148,9 +148,6 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
               >
                 <div className="card-header">
                   <h4>{a.title}</h4>
-                  <span className="card-timestamp">
-                    {new Date(a.created_at).toLocaleDateString()}
-                  </span>
                 </div>
                 <div className="card-desc card-desc-preview">
                   <MarkdownRenderer content={previewDescription(a.description)} />

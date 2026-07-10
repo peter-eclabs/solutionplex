@@ -7,10 +7,9 @@ import './TabStyles.css';
 interface ProblemsTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
-  onCardClickSolution: (id: string) => void;
 }
 
-export function ProblemsTab({ searchQuery, onCardClick, onCardClickSolution }: ProblemsTabProps) {
+export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -149,34 +148,10 @@ export function ProblemsTab({ searchQuery, onCardClick, onCardClickSolution }: P
               >
                 <div className="card-header">
                   <h4>{p.title}</h4>
-                  <span className="card-timestamp">
-                    {new Date(p.created_at).toLocaleDateString()}
-                  </span>
                 </div>
                 <div className="card-desc card-desc-preview">
                   <MarkdownRenderer content={previewDescription(p.description)} />
                 </div>
-
-                {p.solutions && p.solutions.length > 0 && (
-                  <div className="card-relations">
-                    <h5>Proposed Solutions</h5>
-                    <ul className="relation-list">
-                      {p.solutions.map((s) => (
-                        <li
-                          key={s.id}
-                          className="relation-tag solution-tag"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCardClickSolution(s.id);
-                          }}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <span>{s.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </article>
             ))}
           </div>

@@ -148,9 +148,6 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
               >
                 <div className="card-header">
                   <h4>{i.title}</h4>
-                  <span className="card-timestamp">
-                    {new Date(i.created_at).toLocaleDateString()}
-                  </span>
                 </div>
                 <div className="card-desc card-desc-preview">
                   <MarkdownRenderer content={previewDescription(i.description)} />

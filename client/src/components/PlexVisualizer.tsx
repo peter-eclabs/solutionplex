@@ -249,7 +249,7 @@ export function PlexVisualizer({
         id: solution.problem.id,
         label: solution.problem.title,
         type: 'problem',
-        icon: 'arrow-left',
+        icon: 'problem',
         grad: 'grad-prob-sol',
       });
     }
@@ -494,7 +494,7 @@ export function PlexVisualizer({
         id: app.problem.id,
         label: app.problem.title,
         type: 'problem',
-        icon: 'arrow-left',
+        icon: 'problem',
         grad: 'grad-prob-app',
       });
     }
