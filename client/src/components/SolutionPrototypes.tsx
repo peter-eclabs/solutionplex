@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api/client';
 import type { AppShort, AppPrototype } from '../api/client';
 import { CreateAppModal } from './CreateAppModal';
@@ -27,6 +28,10 @@ export function SolutionPrototypes({
   const [search, setSearch] = useState('');
   const [linkError, setLinkError] = useState('');
   const [isLinkOpen, setIsLinkOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const linkListRef = useRef<HTMLDivElement>(null);
+  const [linkCoords, setLinkCoords] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -41,9 +46,44 @@ export function SolutionPrototypes({
   }, [solutionId]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        linkListRef.current &&
+        !linkListRef.current.contains(target)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    const handleReposition = () => {
+      if (isDropdownOpen) {
+        const rect = dropdownRef.current?.getBoundingClientRect();
+        if (rect) setLinkCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleReposition, true);
+    window.addEventListener('resize', handleReposition);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleReposition, true);
+      window.removeEventListener('resize', handleReposition);
+    };
+  }, [isDropdownOpen]);
+
+  const openLinkDropdown = () => {
+    const rect = dropdownRef.current?.getBoundingClientRect();
+    if (rect) setLinkCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setIsDropdownOpen(true);
+  };
+
+  useEffect(() => {
     if (isLinkOpen) {
       setSearch('');
       setLinkError('');
+      setIsDropdownOpen(false);
       loadLinkable();
     }
   }, [isLinkOpen, loadLinkable]);
@@ -200,36 +240,93 @@ export function SolutionPrototypes({
                 Targeting solution: <strong>{solutionTitle}</strong>
               </p>
               {linkError && <div className="error-banner">{linkError}</div>}
-              <div className="form-field">
-                <label htmlFor="sp-link-search">Search Prototypes</label>
-                <input
-                  id="sp-link-search"
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Type to search prototypes..."
-                  autoFocus
-                />
-              </div>
-              {search.trim() && (
-                <ul className="prototype-link-results">
-                  {filteredApps.length === 0 ? (
-                    <li className="prototype-link-empty">No matching prototypes</li>
-                  ) : (
-                    filteredApps.map((a) => (
-                      <li key={a.id}>
-                        <button
-                          type="button"
-                          className="prototype-link-option"
-                          onClick={() => linkApp(a.id)}
-                        >
-                          {a.title}
-                        </button>
-                      </li>
-                    ))
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+                <label
+                  htmlFor="sp-link-search"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  Search Prototypes
+                </label>
+                <div
+                  className={`custom-select-container ${isDropdownOpen ? 'is-open' : ''}`}
+                  ref={dropdownRef}
+                >
+                  <div
+                    className="custom-select-trigger"
+                    style={{ padding: 0, overflow: 'hidden' }}
+                    onClick={() => openLinkDropdown()}
+                  >
+                    <input
+                      id="sp-link-search"
+                      type="text"
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setIsDropdownOpen(true);
+                      }}
+                      onFocus={() => openLinkDropdown()}
+                      placeholder="Type to search prototypes..."
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        border: 'none',
+                        background: 'transparent',
+                        padding: '0.65rem 0.8rem',
+                        fontSize: '0.85rem',
+                        color: 'var(--text-primary)',
+                        outline: 'none',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="custom-select-arrow-btn"
+                      aria-label="Toggle options"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isDropdownOpen) setIsDropdownOpen(false);
+                        else openLinkDropdown();
+                      }}
+                    >
+                      <span className="custom-select-arrow" style={{ marginRight: '0.8rem' }}></span>
+                    </button>
+                  </div>
+                  {isDropdownOpen && linkCoords && createPortal(
+                    <div
+                      className="custom-select-dropdown"
+                      ref={linkListRef}
+                      style={{ position: 'fixed', top: linkCoords.top, left: linkCoords.left, width: linkCoords.width, zIndex: 2000 }}
+                    >
+                      {filteredApps.length === 0 ? (
+                        <div className="custom-select-option" style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                          No matching prototypes
+                        </div>
+                      ) : (
+                        filteredApps.map((a) => (
+                          <div
+                            key={a.id}
+                            className="custom-select-option"
+                            onClick={() => {
+                              linkApp(a.id);
+                              setIsDropdownOpen(false);
+                            }}
+                          >
+                            {a.title}
+                          </div>
+                        ))
+                      )}
+                    </div>,
+                    document.body
                   )}
-                </ul>
-              )}
+                </div>
+              </div>
             </aside>
           </div>
         </div>

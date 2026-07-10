@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Solution } from '../api/client';
-import { CustomSelect } from './CustomSelect';
+import type { Solution, Architecture, Infrastructure } from '../api/client';
+import { MultiSelect } from './MultiSelect';
 import './TabStyles.css';
 
 interface CreateAppModalProps {
@@ -27,12 +28,32 @@ export function CreateAppModal({
   const [description, setDescription] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
+  const [proposeToSolution, setProposeToSolution] = useState(!!solutionId);
   const [selectedSolutionId, setSelectedSolutionId] = useState(solutionId ?? '');
+  const [selectedArchIds, setSelectedArchIds] = useState<string[]>([]);
+  const [selectedInfraIds, setSelectedInfraIds] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const solutionListRef = useRef<HTMLDivElement>(null);
+  const [solutionCoords, setSolutionCoords] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const { data: solutions = [] } = useQuery<Solution[]>({
     queryKey: ['solutions'],
     queryFn: () => api.getSolutions(),
+    enabled: isOpen && !solutionId,
+  });
+
+  const { data: architectures = [] } = useQuery<Architecture[]>({
+    queryKey: ['architectures'],
+    queryFn: () => api.getArchitectures(),
+    enabled: isOpen && !solutionId,
+  });
+
+  const { data: infrastructures = [] } = useQuery<Infrastructure[]>({
+    queryKey: ['infrastructures'],
+    queryFn: () => api.getInfrastructures(),
     enabled: isOpen && !solutionId,
   });
 
@@ -43,10 +64,49 @@ export function CreateAppModal({
       setDescription('');
       setGithubUrl('');
       setLiveUrl('');
+      setProposeToSolution(!!solutionId);
       setSelectedSolutionId(solutionId ?? '');
+      setSelectedArchIds([]);
+      setSelectedInfraIds([]);
+      setSearchQuery(solutionTitle ?? '');
+      setIsDropdownOpen(false);
       setError('');
     }
   }, [isOpen, solutionId]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        solutionListRef.current &&
+        !solutionListRef.current.contains(target)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    const handleReposition = () => {
+      if (isDropdownOpen) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) setSolutionCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleReposition, true);
+    window.addEventListener('resize', handleReposition);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleReposition, true);
+      window.removeEventListener('resize', handleReposition);
+    };
+  }, [isDropdownOpen]);
+
+  const openSolutionDropdown = () => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) setSolutionCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setIsDropdownOpen(true);
+  };
 
   if (!isOpen) return null;
 
@@ -56,13 +116,27 @@ export function CreateAppModal({
       setError('Title, Description, and GitHub URL are required fields.');
       return;
     }
+
+    const targetSolutionId = proposeToSolution ? (solutionId ?? selectedSolutionId) : '';
+    if (proposeToSolution) {
+      if (!targetSolutionId) {
+        setError('Please select a Solution to propose this App to.');
+        return;
+      }
+    } else if (selectedArchIds.length === 0 || selectedInfraIds.length === 0) {
+      setError('Please select both an Architecture Design and an Infrastructure Stack.');
+      return;
+    }
+
     try {
       await api.createApp({
         title: title.trim(),
         description: description.trim(),
         github_url: githubUrl.trim(),
         live_url: liveUrl.trim() || undefined,
-        solution_id: solutionId ?? selectedSolutionId ?? undefined,
+        solution_id: targetSolutionId || undefined,
+        architecture_ids: proposeToSolution ? [] : selectedArchIds,
+        infrastructure_ids: proposeToSolution ? [] : selectedInfraIds,
       });
       onCreated();
       onClose();
@@ -72,7 +146,8 @@ export function CreateAppModal({
     }
   };
 
-  const showSolutionSelect = !solutionId;
+  // The toggle is always shown; when pre-linked to a solution it defaults to ON.
+  const showToggle = true;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -111,18 +186,142 @@ export function CreateAppModal({
                 rows={4}
               />
             </div>
-            {showSolutionSelect && (
-              <div className="form-field">
-                <label htmlFor="app-solution">Associated Solution (Optional)</label>
-                <CustomSelect
-                  id="app-solution"
-                  value={selectedSolutionId}
-                  onChange={setSelectedSolutionId}
-                  options={solutions.map((s) => ({ value: s.id, label: s.title }))}
-                  placeholder="-- Select Solution Target --"
-                />
+
+            {showToggle && (
+              <div className="form-field toggle-field">
+                <label className="toggle-label" htmlFor="app-propose-toggle">
+                  Propose to a Solution?
+                </label>
+                <label className="toggle-switch">
+                  <input
+                    id="app-propose-toggle"
+                    type="checkbox"
+                    checked={proposeToSolution}
+                    onChange={(e) => setProposeToSolution(e.target.checked)}
+                  />
+                  <span className="toggle-slider" aria-hidden="true"></span>
+                </label>
               </div>
             )}
+
+            {showToggle && proposeToSolution && (
+              <div className="form-field" ref={containerRef}>
+                <label htmlFor="app-solution">Associated Solution (Required)</label>
+                <div className={`multi-select-container ${isDropdownOpen ? 'is-open' : ''}`} style={{ position: 'relative' }}>
+                  <div
+                    className="multi-select-trigger"
+                    onClick={() => openSolutionDropdown()}
+                  >
+                    <input
+                      id="app-solution"
+                      type="text"
+                      className="multi-select-input"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        setIsDropdownOpen(true);
+                        const match = solutions.find(
+                          (s) => s.title.toLowerCase() === val.trim().toLowerCase()
+                        );
+                        if (match) {
+                          setSelectedSolutionId(match.id);
+                        } else {
+                          setSelectedSolutionId('');
+                        }
+                      }}
+                      onFocus={() => openSolutionDropdown()}
+                      placeholder="Type to search solutions..."
+                    />
+                    <button
+                      type="button"
+                      className="custom-select-arrow-btn"
+                      aria-label="Toggle options"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isDropdownOpen) setIsDropdownOpen(false);
+                        else openSolutionDropdown();
+                      }}
+                    >
+                      <span className="custom-select-arrow" style={{ margin: 0 }}></span>
+                    </button>
+                  </div>
+
+                  {isDropdownOpen && solutionCoords && createPortal(
+                    <div
+                      className="custom-select-dropdown"
+                      ref={solutionListRef}
+                      style={{ position: 'fixed', top: solutionCoords.top, left: solutionCoords.left, width: solutionCoords.width, zIndex: 2000 }}
+                    >
+                      <div
+                        className={`custom-select-option ${selectedSolutionId === '' ? 'is-selected' : ''}`}
+                        onClick={() => {
+                          setSelectedSolutionId('');
+                          setSearchQuery('');
+                          setIsDropdownOpen(false);
+                        }}
+                      >
+                        -- Select Solution Target --
+                      </div>
+                      {solutions
+                        .filter((s) =>
+                          s.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((s) => (
+                          <div
+                            key={s.id}
+                            className={`custom-select-option ${selectedSolutionId === s.id ? 'is-selected' : ''}`}
+                            onClick={() => {
+                              setSelectedSolutionId(s.id);
+                              setSearchQuery(s.title);
+                              setIsDropdownOpen(false);
+                            }}
+                          >
+                            {s.title}
+                          </div>
+                        ))}
+                      {solutions.filter((s) =>
+                        s.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div className="multi-select-empty" style={{ padding: '0.65rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          No matches found
+                        </div>
+                      )}
+                    </div>,
+                    document.body
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showToggle && !proposeToSolution && (
+              <>
+                <div className="form-field">
+                  <label>Architecture Designs (Required)</label>
+                  <MultiSelect
+                    id="app-arch"
+                    options={architectures.map((arch) => ({ value: arch.id, label: arch.title }))}
+                    selectedValues={selectedArchIds}
+                    onChange={setSelectedArchIds}
+                    placeholder="Search architecture designs…"
+                    emptyText="No architectures available"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Infrastructure Stacks (Required)</label>
+                  <MultiSelect
+                    id="app-infra"
+                    options={infrastructures.map((infra) => ({ value: infra.id, label: infra.title }))}
+                    selectedValues={selectedInfraIds}
+                    onChange={setSelectedInfraIds}
+                    placeholder="Search infrastructure stacks…"
+                    emptyText="No infrastructure available"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="form-field">
               <label htmlFor="app-github">GitHub Repository URL (Required)</label>
               <input

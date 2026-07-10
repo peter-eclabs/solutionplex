@@ -295,6 +295,58 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     }
   };
 
+  const getBackNavigation = () => {
+    const state = window.history.state as { fromApp?: boolean; fromPath?: string } | null;
+    
+    if (state?.fromApp && state?.fromPath) {
+      const fromPath = state.fromPath;
+      if (fromPath === '/') {
+        return { label: 'BACK TO DASHBOARD', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/problems/')) {
+        return { label: 'BACK TO PROBLEM', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/solutions/')) {
+        return { label: 'BACK TO SOLUTION', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/architecture/')) {
+        return { label: 'BACK TO ARCHITECTURE', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/infrastructure/')) {
+        return { label: 'BACK TO INFRASTRUCTURE', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/apps/')) {
+        return { label: 'BACK TO APP', action: () => window.history.back() };
+      }
+    }
+
+    if (component === 'solutions' && solutionData?.problem?.id) {
+      return {
+        label: 'BACK TO PROBLEM',
+        action: () => onNavigate(`/problems/${solutionData.problem!.id}`),
+      };
+    }
+    if (component === 'apps') {
+      if (appData?.solution?.id) {
+        return {
+          label: 'BACK TO SOLUTION',
+          action: () => onNavigate(`/solutions/${appData.solution!.id}`),
+        };
+      }
+      if (appData?.problem?.id) {
+        return {
+          label: 'BACK TO PROBLEM',
+          action: () => onNavigate(`/problems/${appData.problem!.id}`),
+        };
+      }
+    }
+    
+    return {
+      label: 'BACK TO DASHBOARD',
+      action: () => onNavigate('/'),
+    };
+  };
+
   if (isLoading && !isEditing) {
     return (
       <div className="telemetry-loader">
@@ -320,15 +372,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     <div className="detail-page-container">
       {/* Header telemetry info */}
       <div className="detail-nav-header">
-        {component === 'solutions' && solutionData?.problem ? (
-          <button onClick={() => onNavigate(`/problems/${solutionData.problem!.id}`)} className="back-link">
-            <span className="arrow">←</span> BACK TO PROBLEM
-          </button>
-        ) : (
-          <button onClick={() => onNavigate('/')} className="back-link">
-            <span className="arrow">←</span> BACK TO DASHBOARD
-          </button>
-        )}
+        <button onClick={getBackNavigation().action} className="back-link">
+          <span className="arrow">←</span> {getBackNavigation().label}
+        </button>
         <div className="telemetry-node-info">
           <span className="telemetry-label">SYSTEM_NODE // </span>
           <span className="telemetry-value" style={{ color: getComponentBadgeColor() }}>
@@ -545,17 +591,6 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   </div>
                 )}
                 {component === 'apps' && appData && (
-                  <div className="card-visualizer-section">
-                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
-                    <PlexVisualizer
-                      component="apps"
-                      data={appData}
-                      onNavigate={onNavigate}
-                    />
-                  </div>
-                )}
-
-                {component === 'apps' && appData && (
                   <div className="app-links-group">
                     <a
                       href={appData.github_url}
@@ -591,6 +626,17 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                       <MarkdownRenderer content={readme} />
                     </div>
                   )}
+                </div>
+              )}
+
+              {component === 'apps' && appData && (
+                <div className="card-visualizer-section">
+                  <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                  <PlexVisualizer
+                    component="apps"
+                    data={appData}
+                    onNavigate={onNavigate}
+                  />
                 </div>
               )}
 

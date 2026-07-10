@@ -139,9 +139,9 @@ export const api = {
   // App endpoints
   getApps: (q?: string) => request<AppPrototype[]>(`/api/apps/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getApp: (id: string) => request<AppPrototype>(`/api/apps/${id}`),
-  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; solution_id?: string }) =>
+  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<AppPrototype>('/api/apps/', { method: 'POST', body: JSON.stringify(data) }),
-  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; solution_id?: string }) =>
+  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<AppPrototype>(`/api/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteApp: (id: string) =>
     request<{ detail: string }>(`/api/apps/${id}`, { method: 'DELETE' }),

@@ -44,7 +44,8 @@ export function App() {
   }, []);
 
   const navigate = (to: string) => {
-    window.history.pushState(null, '', to);
+    const fromPath = window.location.pathname;
+    window.history.pushState({ fromApp: true, fromPath }, '', to);
     setCurrentPath(to);
   };
 
