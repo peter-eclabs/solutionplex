@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": {
+    "python": {
+      "command": ["D:/Peter/solutionplex/server/.venv/Scripts/pyright-langserver.exe", "--stdio"],
+      "extensions": ["py", "pyi"],
+      "env": {
+        "VIRTUAL_ENV": "D:/Peter/solutionplex/server/.venv"
+      }
+    },
+    "typescript": {
+      "command": ["typescript-language-server", "--stdio"],
+      "extensions": ["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"]
+    }
+  }
+}
