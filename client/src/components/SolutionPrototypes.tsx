@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import type { AppShort, AppPrototype } from '../api/client';
 import { CustomSelect } from './CustomSelect';
+import { useToast } from './ToastContext';
 import './TabStyles.css';
 
 interface SolutionPrototypesProps {
@@ -19,6 +20,7 @@ export function SolutionPrototypes({
   onChanged,
   onNavigate,
 }: SolutionPrototypesProps) {
+  const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
@@ -103,8 +105,10 @@ export function SolutionPrototypes({
       await api.updateApp(appId, { solution_id: '' });
       setRemovingId(null);
       onChanged();
+      showToast('Prototype unlinked from solution', 'success');
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      const message = err instanceof Error ? err.message : 'Failed to unlink prototype';
+      showToast(message, 'error');
     }
   };
 
@@ -113,8 +117,10 @@ export function SolutionPrototypes({
       await api.deleteApp(appId);
       setRemovingId(null);
       onChanged();
+      showToast('Prototype deleted', 'success');
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      const message = err instanceof Error ? err.message : 'Failed to delete prototype';
+      showToast(message, 'error');
     }
   };
 
@@ -161,21 +167,21 @@ export function SolutionPrototypes({
                   <button
                     type="button"
                     className="prototype-unlink-btn"
-                    onClick={() => handleUnlink(app.id)}
+                    onClick={(e) => { e.stopPropagation(); handleUnlink(app.id); }}
                   >
                     Unlink
                   </button>
                   <button
                     type="button"
                     className="prototype-delete-btn"
-                    onClick={() => handleDelete(app.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(app.id); }}
                   >
                     Delete
                   </button>
                   <button
                     type="button"
                     className="prototype-cancel-btn"
-                    onClick={() => setRemovingId(null)}
+                    onClick={(e) => { e.stopPropagation(); setRemovingId(null); }}
                   >
                     Cancel
                   </button>
@@ -185,7 +191,7 @@ export function SolutionPrototypes({
                   type="button"
                   className="prototype-remove-trigger"
                   aria-label={`Remove ${app.title}`}
-                  onClick={() => setRemovingId(app.id)}
+                  onClick={(e) => { e.stopPropagation(); setRemovingId(app.id); }}
                 >
                   ✕
                 </button>
