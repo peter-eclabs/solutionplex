@@ -62,16 +62,6 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel collapsed">
-        <button
-          type="button"
-          className="open-form-btn btn-infra"
-          onClick={() => setIsFormOpen(true)}
-        >
-          <span>+</span> Create Infrastructure Card
-        </button>
-      </aside>
-
       {isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -121,10 +111,26 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
       <section className="list-panel">
         {loading ? (
           <p className="status-text">Loading infrastructures...</p>
-        ) : infras.length === 0 ? (
-          <p className="status-text">No infrastructure cards found.</p>
         ) : (
           <div className="cards-grid">
+            <article
+              className="entity-card add-card-trigger btn-infra"
+              onClick={() => setIsFormOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsFormOpen(true);
+                }
+              }}
+            >
+              <div className="add-card-content">
+                <span className="add-icon">+</span>
+                <span className="add-text">Create Infrastructure Card</span>
+              </div>
+            </article>
+
             {infras.map((i) => (
               <article
                 key={i.id}

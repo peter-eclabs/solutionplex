@@ -125,20 +125,8 @@ export function SolutionsTab({
         setError('Failed to submit solution mapping');
       }
     }
-  };
-
-  return (
+  };  return (
     <div className="tab-split-container">
-      <aside className="creation-panel collapsed">
-        <button
-          type="button"
-          className="open-form-btn btn-solution"
-          onClick={() => setIsFormOpen(true)}
-        >
-          <span>+</span> Propose Solution Card
-        </button>
-      </aside>
-
       {isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -255,10 +243,26 @@ export function SolutionsTab({
       <section className="list-panel">
         {loading ? (
           <p className="status-text">Loading solution maps...</p>
-        ) : solutions.length === 0 ? (
-          <p className="status-text">No solutions mapped yet.</p>
         ) : (
           <div className="cards-grid">
+            <article
+              className="entity-card add-card-trigger btn-solution"
+              onClick={() => setIsFormOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsFormOpen(true);
+                }
+              }}
+            >
+              <div className="add-card-content">
+                <span className="add-icon">+</span>
+                <span className="add-text">Propose Solution Card</span>
+              </div>
+            </article>
+
             {solutions.map((s) => (
               <article
                 key={s.id}
@@ -280,66 +284,6 @@ export function SolutionsTab({
                   </span>
                 </div>
                 <p className="card-desc card-desc-preview">{previewDescription(s.description)}</p>
-
-                <div className="card-relations">
-                  {s.problem && (
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <h5>Addresses Problem</h5>
-                      <span
-                        className="relation-tag prob-tag"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCardClickProblem(s.problem!.id);
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {s.problem.title}
-                      </span>
-                    </div>
-                  )}
-
-                  {s.architectures && s.architectures.length > 0 && (
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <h5>Architectures Used</h5>
-                      <div className="relation-list">
-                        {s.architectures.map((a) => (
-                          <span
-                            key={a.id}
-                            className="relation-tag arch-tag"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onCardClickArch(a.id);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {a.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {s.infrastructures && s.infrastructures.length > 0 && (
-                    <div>
-                      <h5>Infrastructure Deployed</h5>
-                      <div className="relation-list">
-                        {s.infrastructures.map((i) => (
-                          <span
-                            key={i.id}
-                            className="relation-tag infra-tag"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onCardClickInfra(i.id);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {i.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
               </article>
             ))}
           </div>

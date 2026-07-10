@@ -19,10 +19,6 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
   const [liveUrl, setLiveUrl] = useState('');
   const [selectedProblemId, setSelectedProblemId] = useState('');
   
-  const [expandedReadmeAppId, setExpandedReadmeAppId] = useState<string | null>(null);
-  const [readmeContent, setReadmeContent] = useState<string>('');
-  const [readmeLoading, setReadmeLoading] = useState(false);
-  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -99,43 +95,8 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
     }
   };
 
-  const handleToggleReadme = async (appId: string, url: string) => {
-    if (expandedReadmeAppId === appId) {
-      setExpandedReadmeAppId(null);
-      setReadmeContent('');
-      return;
-    }
-
-    try {
-      setReadmeLoading(true);
-      setExpandedReadmeAppId(appId);
-      setReadmeContent('Fetching repository README documentation...');
-      
-      const data = await api.getReadme(url);
-      setReadmeContent(data.readme_content);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setReadmeContent(err.message);
-      } else {
-        setReadmeContent('Failed to retrieve README from GitHub API. Verify URL and token.');
-      }
-    } finally {
-      setReadmeLoading(false);
-    }
-  };
-
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel collapsed">
-        <button
-          type="button"
-          className="open-form-btn btn-app"
-          onClick={() => setIsFormOpen(true)}
-        >
-          <span>+</span> Create App Card
-        </button>
-      </aside>
-
       {isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -229,10 +190,26 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
       <section className="list-panel">
         {loading ? (
           <p className="status-text">Loading app prototype mappings...</p>
-        ) : apps.length === 0 ? (
-          <p className="status-text">No apps mapped yet.</p>
         ) : (
           <div className="cards-grid">
+            <article
+              className="entity-card add-card-trigger btn-app"
+              onClick={() => setIsFormOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsFormOpen(true);
+                }
+              }}
+            >
+              <div className="add-card-content">
+                <span className="add-icon">+</span>
+                <span className="add-text">Create App Card</span>
+              </div>
+            </article>
+
             {apps.map((app) => (
               <article
                 key={app.id}
@@ -269,25 +246,7 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
                 </div>
                 <p className="card-desc card-desc-preview">{previewDescription(app.description)}</p>
 
-                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleReadme(app.id, app.github_url);
-                    }}
-                    className="submit-btn"
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border-subtle)',
-                      marginTop: 0,
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.85rem'
-                    }}
-                    disabled={readmeLoading && expandedReadmeAppId === app.id}
-                  >
-                    {expandedReadmeAppId === app.id ? (readmeLoading ? 'Loading...' : 'Hide README') : 'Show README'}
-                  </button>
-
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
                   <a
                     href={app.github_url}
                     target="_blank"
@@ -302,8 +261,9 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
                       background: 'var(--bg-tertiary)',
                       border: '1px solid var(--border-subtle)',
                       marginTop: 0,
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.85rem'
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.8rem',
+                      borderRadius: 'var(--radius-sm)'
                     }}
                   >
                     GitHub Repo ↗
@@ -323,44 +283,15 @@ export function AppsTab({ searchQuery, onCardClick, onCardClickProblem }: AppsTa
                         textDecoration: 'none',
                         background: 'var(--accent-blue)',
                         marginTop: 0,
-                        padding: '0.5rem 1rem',
-                        fontSize: '0.85rem'
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.8rem',
+                        borderRadius: 'var(--radius-sm)'
                       }}
                     >
                       Launch App ↗
                     </a>
                   )}
                 </div>
-
-                {expandedReadmeAppId === app.id && (
-                  <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                    <h5 style={{
-                      fontSize: '0.8rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: 'var(--text-muted)',
-                      marginBottom: '0.5rem'
-                    }}>
-                      README.md Documentation
-                    </h5>
-                    <pre style={{
-                      marginTop: '0.5rem',
-                      padding: '1rem',
-                      backgroundColor: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      whiteSpace: 'pre-wrap',
-                      fontSize: '0.825rem',
-                      fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
-                      color: 'var(--text-secondary)',
-                      lineHeight: '1.4'
-                    }}>
-                      {readmeContent}
-                    </pre>
-                  </div>
-                )}
               </article>
             ))}
           </div>

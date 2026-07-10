@@ -63,16 +63,6 @@ export function ProblemsTab({ searchQuery, onCardClick, onCardClickSolution }: P
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel collapsed">
-        <button
-          type="button"
-          className="open-form-btn btn-problem"
-          onClick={() => setIsFormOpen(true)}
-        >
-          <span>+</span> Create Problem Card
-        </button>
-      </aside>
-
       {isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -122,10 +112,26 @@ export function ProblemsTab({ searchQuery, onCardClick, onCardClickSolution }: P
       <section className="list-panel">
         {loading ? (
           <p className="status-text">Loading problem entries...</p>
-        ) : problems.length === 0 ? (
-          <p className="status-text">No problem cards found.</p>
         ) : (
           <div className="cards-grid">
+            <article
+              className="entity-card add-card-trigger btn-problem"
+              onClick={() => setIsFormOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsFormOpen(true);
+                }
+              }}
+            >
+              <div className="add-card-content">
+                <span className="add-icon">+</span>
+                <span className="add-text">Create Problem Card</span>
+              </div>
+            </article>
+
             {problems.map((p) => (
               <article
                 key={p.id}

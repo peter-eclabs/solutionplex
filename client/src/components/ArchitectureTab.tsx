@@ -62,16 +62,6 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
 
   return (
     <div className="tab-split-container">
-      <aside className="creation-panel collapsed">
-        <button
-          type="button"
-          className="open-form-btn btn-arch"
-          onClick={() => setIsFormOpen(true)}
-        >
-          <span>+</span> Create Architecture Card
-        </button>
-      </aside>
-
       {isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -121,10 +111,26 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
       <section className="list-panel">
         {loading ? (
           <p className="status-text">Loading architectures...</p>
-        ) : archs.length === 0 ? (
-          <p className="status-text">No architecture cards found.</p>
         ) : (
           <div className="cards-grid">
+            <article
+              className="entity-card add-card-trigger btn-arch"
+              onClick={() => setIsFormOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsFormOpen(true);
+                }
+              }}
+            >
+              <div className="add-card-content">
+                <span className="add-icon">+</span>
+                <span className="add-text">Create Architecture Card</span>
+              </div>
+            </article>
+
             {archs.map((a) => (
               <article
                 key={a.id}

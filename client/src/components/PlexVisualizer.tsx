@@ -17,10 +17,12 @@ interface NodeData {
   y: number;
   icon: string;
   isParent?: boolean;
+  isCategory?: boolean;
+  items?: { id: string; title: string }[];
 }
 
 interface FloatingPanelState {
-  type: 'architecture' | 'infrastructure';
+  type: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
   title: string;
   items: { id: string; title: string }[];
   x: number;
@@ -154,23 +156,52 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    // Outer circle items: Solutions & Apps
-    const solItems = (problem.solutions || []).map((s) => ({
-      id: s.id,
-      label: s.title,
-      type: 'solution' as const,
-      icon: 'solution',
-      grad: 'grad-prob-sol',
-    }));
-    const appItems = relatedApps.map((a) => ({
-      id: a.id,
-      label: a.title,
-      type: 'app' as const,
-      icon: 'app',
-      grad: 'grad-prob-app',
-    }));
+    const outerItems: { id: string; label: string; type: 'solution' | 'app'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
 
-    const outerItems = [...solItems, ...appItems];
+    // Solutions: 1 direct, >1 category node
+    const sols = problem.solutions || [];
+    if (sols.length === 1) {
+      outerItems.push({
+        id: sols[0].id,
+        label: sols[0].title,
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-prob-sol',
+      });
+    } else if (sols.length > 1) {
+      outerItems.push({
+        id: 'cat-solutions',
+        label: 'Solutions',
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-prob-sol',
+        isCategory: true,
+        items: sols.map((s) => ({ id: s.id, title: s.title })),
+      });
+    }
+
+    // Apps: 1 direct, >1 category node
+    const apps = relatedApps || [];
+    if (apps.length === 1) {
+      outerItems.push({
+        id: apps[0].id,
+        label: apps[0].title,
+        type: 'app',
+        icon: 'app',
+        grad: 'grad-prob-app',
+      });
+    } else if (apps.length > 1) {
+      outerItems.push({
+        id: 'cat-apps',
+        label: 'Apps',
+        type: 'app',
+        icon: 'app',
+        grad: 'grad-prob-app',
+        isCategory: true,
+        items: apps.map((a) => ({ id: a.id, title: a.title })),
+      });
+    }
+
     const rx = Math.max(120, Math.min(cx * 0.55, 220));
     const ry = Math.max(70, Math.min(cy * 0.55, 100));
 
@@ -188,6 +219,8 @@ export function PlexVisualizer({
         x,
         y,
         icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
       });
 
       links.push({
@@ -209,57 +242,88 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    // Left: Parent Problem
+    const outerItems: { id: string; label: string; type: 'problem' | 'architecture' | 'infrastructure'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    
     if (solution.problem) {
-      const probX = cx - Math.max(160, cx * 0.5) - NODE_WIDTH / 2;
-      const probY = cy - NODE_HEIGHT / 2;
-      nodes.push({
+      outerItems.push({
         id: solution.problem.id,
         label: solution.problem.title,
         type: 'problem',
-        x: probX,
-        y: probY,
         icon: 'arrow-left',
-      });
-      links.push({
-        sourceId: solution.id,
-        targetId: solution.problem.id,
-        gradId: 'grad-prob-sol',
+        grad: 'grad-prob-sol',
       });
     }
 
-    // Top Right: Architecture Category
-    const archX = cx + Math.max(160, cx * 0.5) - NODE_WIDTH / 2;
-    const archY = cy - Math.max(60, cy * 0.35) - NODE_HEIGHT / 2;
-    nodes.push({
-      id: 'cat-architecture',
-      label: 'Architecture',
-      type: 'architecture',
-      x: archX,
-      y: archY,
-      icon: 'architecture',
-    });
-    links.push({
-      sourceId: solution.id,
-      targetId: 'cat-architecture',
-      gradId: 'grad-sol-arch',
-    });
+    // Architectures: 1 direct, >1 category node
+    const archs = solution.architectures || [];
+    if (archs.length === 1) {
+      outerItems.push({
+        id: archs[0].id,
+        label: archs[0].title,
+        type: 'architecture',
+        icon: 'architecture',
+        grad: 'grad-sol-arch',
+      });
+    } else if (archs.length > 1) {
+      outerItems.push({
+        id: 'cat-architecture',
+        label: 'Architecture',
+        type: 'architecture',
+        icon: 'architecture',
+        grad: 'grad-sol-arch',
+        isCategory: true,
+        items: archs.map((a) => ({ id: a.id, title: a.title })),
+      });
+    }
 
-    // Bottom Right: Infrastructure Category
-    const infraX = cx + Math.max(160, cx * 0.5) - NODE_WIDTH / 2;
-    const infraY = cy + Math.max(60, cy * 0.35) - NODE_HEIGHT / 2;
-    nodes.push({
-      id: 'cat-infrastructure',
-      label: 'Infrastructure',
-      type: 'infrastructure',
-      x: infraX,
-      y: infraY,
-      icon: 'infrastructure',
-    });
-    links.push({
-      sourceId: solution.id,
-      targetId: 'cat-infrastructure',
-      gradId: 'grad-sol-infra',
+    // Infrastructures: 1 direct, >1 category node
+    const infras = solution.infrastructures || [];
+    if (infras.length === 1) {
+      outerItems.push({
+        id: infras[0].id,
+        label: infras[0].title,
+        type: 'infrastructure',
+        icon: 'infrastructure',
+        grad: 'grad-sol-infra',
+      });
+    } else if (infras.length > 1) {
+      outerItems.push({
+        id: 'cat-infrastructure',
+        label: 'Infrastructure',
+        type: 'infrastructure',
+        icon: 'infrastructure',
+        grad: 'grad-sol-infra',
+        isCategory: true,
+        items: infras.map((i) => ({ id: i.id, title: i.title })),
+      });
+    }
+
+    const rx = Math.max(120, Math.min(cx * 0.55, 220));
+    const ry = Math.max(70, Math.min(cy * 0.55, 100));
+
+    outerItems.forEach((item, index) => {
+      const angle = outerItems.length === 1 
+        ? Math.PI / 2 
+        : (index * 2 * Math.PI) / outerItems.length + Math.PI / 2;
+      const x = cx + rx * Math.cos(angle) - NODE_WIDTH / 2;
+      const y = cy + ry * Math.sin(angle) - NODE_HEIGHT / 2;
+
+      nodes.push({
+        id: item.id,
+        label: item.label,
+        type: item.type,
+        x,
+        y,
+        icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
+      });
+
+      links.push({
+        sourceId: solution.id,
+        targetId: item.id,
+        gradId: item.grad,
+      });
     });
   } else if (component === 'architecture') {
     const arch = data as Architecture;
@@ -274,30 +338,55 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    // Surrounding: Implementing Solutions
+    const outerItems: { id: string; label: string; type: 'solution'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+
+    // Solutions: 1 direct, >1 category node
+    const sols = relatedSolutions || [];
+    if (sols.length === 1) {
+      outerItems.push({
+        id: sols[0].id,
+        label: sols[0].title,
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-arch',
+      });
+    } else if (sols.length > 1) {
+      outerItems.push({
+        id: 'cat-solutions',
+        label: 'Solutions',
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-arch',
+        isCategory: true,
+        items: sols.map((s) => ({ id: s.id, title: s.title })),
+      });
+    }
+
     const rx = Math.max(120, Math.min(cx * 0.55, 220));
     const ry = Math.max(70, Math.min(cy * 0.55, 100));
 
-    relatedSolutions.forEach((sol, index) => {
-      const angle = relatedSolutions.length === 1 
+    outerItems.forEach((item, index) => {
+      const angle = outerItems.length === 1 
         ? Math.PI / 2 
-        : (index * 2 * Math.PI) / relatedSolutions.length + Math.PI / 2;
+        : (index * 2 * Math.PI) / outerItems.length + Math.PI / 2;
       const x = cx + rx * Math.cos(angle) - NODE_WIDTH / 2;
       const y = cy + ry * Math.sin(angle) - NODE_HEIGHT / 2;
 
       nodes.push({
-        id: sol.id,
-        label: sol.title,
-        type: 'solution',
+        id: item.id,
+        label: item.label,
+        type: item.type,
         x,
         y,
-        icon: 'solution',
+        icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
       });
 
       links.push({
         sourceId: arch.id,
-        targetId: sol.id,
-        gradId: 'grad-sol-arch',
+        targetId: item.id,
+        gradId: item.grad,
       });
     });
   } else if (component === 'infrastructure') {
@@ -313,30 +402,55 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    // Surrounding: Deploying Solutions
+    const outerItems: { id: string; label: string; type: 'solution'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+
+    // Solutions: 1 direct, >1 category node
+    const sols = relatedSolutions || [];
+    if (sols.length === 1) {
+      outerItems.push({
+        id: sols[0].id,
+        label: sols[0].title,
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-infra',
+      });
+    } else if (sols.length > 1) {
+      outerItems.push({
+        id: 'cat-solutions',
+        label: 'Solutions',
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-infra',
+        isCategory: true,
+        items: sols.map((s) => ({ id: s.id, title: s.title })),
+      });
+    }
+
     const rx = Math.max(120, Math.min(cx * 0.55, 220));
     const ry = Math.max(70, Math.min(cy * 0.55, 100));
 
-    relatedSolutions.forEach((sol, index) => {
-      const angle = relatedSolutions.length === 1 
+    outerItems.forEach((item, index) => {
+      const angle = outerItems.length === 1 
         ? Math.PI / 2 
-        : (index * 2 * Math.PI) / relatedSolutions.length + Math.PI / 2;
+        : (index * 2 * Math.PI) / outerItems.length + Math.PI / 2;
       const x = cx + rx * Math.cos(angle) - NODE_WIDTH / 2;
       const y = cy + ry * Math.sin(angle) - NODE_HEIGHT / 2;
 
       nodes.push({
-        id: sol.id,
-        label: sol.title,
-        type: 'solution',
+        id: item.id,
+        label: item.label,
+        type: item.type,
         x,
         y,
-        icon: 'solution',
+        icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
       });
 
       links.push({
         sourceId: infra.id,
-        targetId: sol.id,
-        gradId: 'grad-sol-infra',
+        targetId: item.id,
+        gradId: item.grad,
       });
     });
   } else if (component === 'apps') {
@@ -352,50 +466,79 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    // Left: Addressed Problem
+    const outerItems: { id: string; label: string; type: 'problem'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
     if (app.problem) {
-      const probX = cx - Math.max(160, cx * 0.5) - NODE_WIDTH / 2;
-      const probY = cy - NODE_HEIGHT / 2;
-      nodes.push({
+      outerItems.push({
         id: app.problem.id,
         label: app.problem.title,
         type: 'problem',
-        x: probX,
-        y: probY,
         icon: 'arrow-left',
-      });
-      links.push({
-        sourceId: app.id,
-        targetId: app.problem.id,
-        gradId: 'grad-prob-app',
+        grad: 'grad-prob-app',
       });
     }
+
+    const rx = Math.max(120, Math.min(cx * 0.55, 220));
+    const ry = Math.max(70, Math.min(cy * 0.55, 100));
+
+    outerItems.forEach((item, index) => {
+      const angle = outerItems.length === 1 
+        ? Math.PI / 2 
+        : (index * 2 * Math.PI) / outerItems.length + Math.PI / 2;
+      const x = cx + rx * Math.cos(angle) - NODE_WIDTH / 2;
+      const y = cy + ry * Math.sin(angle) - NODE_HEIGHT / 2;
+
+      nodes.push({
+        id: item.id,
+        label: item.label,
+        type: item.type,
+        x,
+        y,
+        icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
+      });
+
+      links.push({
+        sourceId: app.id,
+        targetId: item.id,
+        gradId: item.grad,
+      });
+    });
   }
 
   // Draw smooth Bezier connector line
   const makeBezierPath = (x1: number, y1: number, x2: number, y2: number) => {
-    const dx = Math.abs(x2 - x1) * 0.5;
-    const ctrl1X = x1 + (x2 > x1 ? dx : -dx);
+    // Avoid perfectly vertical or horizontal lines to ensure SVG linear gradients render correctly
+    // due to the bounding box zero-dimension bug.
+    const targetX = Math.abs(x2 - x1) < 0.1 ? x2 + 0.1 : x2;
+    const targetY = Math.abs(y2 - y1) < 0.1 ? y2 + 0.1 : y2;
+
+    const dx = Math.abs(targetX - x1) * 0.5;
+    const ctrl1X = x1 + (targetX > x1 ? dx : -dx);
     const ctrl1Y = y1;
-    const ctrl2X = x2 + (x2 > x1 ? -dx : dx);
-    const ctrl2Y = y2;
-    return `M ${x1} ${y1} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${x2} ${y2}`;
+    const ctrl2X = targetX + (targetX > x1 ? -dx : dx);
+    const ctrl2Y = targetY;
+    return `M ${x1} ${y1} C ${ctrl1X} ${ctrl1Y}, ${ctrl2X} ${ctrl2Y}, ${targetX} ${targetY}`;
   };
 
   const handleNodeClick = (node: NodeData) => {
     if (node.isParent) return;
 
-    if (node.type === 'problem') {
-      onNavigate(`/problems/${node.id}`);
-    } else if (node.type === 'solution') {
-      onNavigate(`/solutions/${node.id}`);
-    } else if (node.type === 'app') {
-      onNavigate(`/apps/${node.id}`);
-    } else if (node.type === 'architecture' || node.type === 'infrastructure') {
+    if (node.isCategory && node.items) {
       // Toggle floating category list
-      const solution = data as Solution;
-      const items = node.type === 'architecture' ? solution.architectures : solution.infrastructures;
-      const title = node.type === 'architecture' ? 'Architecture Pattern Stacks' : 'Infrastructure Deployments';
+      const title = 
+        node.type === 'problem' ? 'Related Problems' :
+        node.type === 'solution' ? 'Related Solutions' :
+        node.type === 'architecture' ? 'Architecture Pattern Stacks' :
+        node.type === 'infrastructure' ? 'Infrastructure Deployments' :
+        node.type === 'app' ? 'Linked Prototypes' : 'Entities';
+
+      const targetType = 
+        node.type === 'problem' ? 'problems' :
+        node.type === 'solution' ? 'solutions' :
+        node.type === 'architecture' ? 'architecture' :
+        node.type === 'infrastructure' ? 'infrastructure' :
+        node.type === 'app' ? 'apps' : 'solutions';
 
       let left = node.x + NODE_WIDTH + 12;
       let top = node.y - 15;
@@ -408,12 +551,25 @@ export function PlexVisualizer({
       if (top < 10) top = 10;
 
       setFloatingPanel({
-        type: node.type as 'architecture' | 'infrastructure',
+        type: targetType as any,
         title,
-        items,
+        items: node.items,
         x: left,
         y: top,
       });
+      return;
+    }
+
+    if (node.type === 'problem') {
+      onNavigate(`/problems/${node.id}`);
+    } else if (node.type === 'solution') {
+      onNavigate(`/solutions/${node.id}`);
+    } else if (node.type === 'app') {
+      onNavigate(`/apps/${node.id}`);
+    } else if (node.type === 'architecture') {
+      onNavigate(`/architecture/${node.id}`);
+    } else if (node.type === 'infrastructure') {
+      onNavigate(`/infrastructure/${node.id}`);
     }
   };
 

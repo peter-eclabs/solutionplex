@@ -1,15 +1,8 @@
-/* Blueprint Tab Layout */
 .tab-split-container {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 1fr;
   gap: 2rem;
   align-items: flex-start;
-}
-
-@media (max-width: 992px) {
-  .tab-split-container {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Control Panel (Creation Side) */
@@ -406,6 +399,115 @@
   content: 'CONSOLE TRIGGER';
 }
 
+/* Add Card Trigger */
+.add-card-trigger {
+  border: 1.5px dashed var(--border-grid) !important;
+  background-color: rgba(22, 22, 26, 0.4) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  min-height: 200px !important;
+  max-height: 200px !important;
+  cursor: pointer !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.add-card-trigger::before {
+  display: none !important;
+}
+
+.add-card-trigger .add-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.add-card-trigger .add-icon {
+  font-size: 2.2rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.add-card-trigger .add-text {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+}
+
+.add-card-trigger.btn-problem {
+  border-color: rgba(255, 77, 121, 0.3) !important;
+}
+.add-card-trigger.btn-problem:hover {
+  border-color: var(--accent-problem) !important;
+  background-color: rgba(255, 77, 121, 0.05) !important;
+  box-shadow: 0 0 15px rgba(255, 77, 121, 0.1) !important;
+}
+.add-card-trigger.btn-problem:hover .add-icon,
+.add-card-trigger.btn-problem:hover .add-text {
+  color: var(--accent-problem);
+}
+
+.add-card-trigger.btn-solution {
+  border-color: rgba(0, 245, 155, 0.3) !important;
+}
+.add-card-trigger.btn-solution:hover {
+  border-color: var(--accent-solution) !important;
+  background-color: rgba(0, 245, 155, 0.05) !important;
+  box-shadow: 0 0 15px rgba(0, 245, 155, 0.1) !important;
+}
+.add-card-trigger.btn-solution:hover .add-icon,
+.add-card-trigger.btn-solution:hover .add-text {
+  color: var(--accent-solution);
+}
+
+.add-card-trigger.btn-arch {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+.add-card-trigger.btn-arch:hover {
+  border-color: var(--accent-arch) !important;
+  background-color: rgba(139, 92, 246, 0.05) !important;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.1) !important;
+}
+.add-card-trigger.btn-arch:hover .add-icon,
+.add-card-trigger.btn-arch:hover .add-text {
+  color: var(--accent-arch);
+}
+
+.add-card-trigger.btn-infra {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+.add-card-trigger.btn-infra:hover {
+  border-color: var(--accent-infra) !important;
+  background-color: rgba(245, 158, 11, 0.05) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.1) !important;
+}
+.add-card-trigger.btn-infra:hover .add-icon,
+.add-card-trigger.btn-infra:hover .add-text {
+  color: var(--accent-infra);
+}
+
+.add-card-trigger.btn-app {
+  border-color: rgba(0, 216, 246, 0.3) !important;
+}
+.add-card-trigger.btn-app:hover {
+  border-color: var(--accent-cyan) !important;
+  background-color: rgba(0, 216, 246, 0.05) !important;
+  box-shadow: 0 0 15px rgba(0, 216, 246, 0.1) !important;
+}
+.add-card-trigger.btn-app:hover .add-icon,
+.add-card-trigger.btn-app:hover .add-text {
+  color: var(--accent-cyan);
+}
+
 /* Open Form Button */
 .open-form-btn {
   width: 100%;
@@ -519,11 +621,6 @@
   top: 0;
   margin: 0;
   width: 100%;
-}
-
-/* App cards grow with their action buttons / README (no fixed height) */
-.app-card {
-  max-height: none;
 }
 
 /* Modal Close Button */
