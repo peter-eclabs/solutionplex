@@ -143,6 +143,7 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                   onDeleted={() => queryClient.invalidateQueries({ queryKey: ['architectures'] })}
                 />
                 <div className="card-header">
+                  {a.code && <span className="entity-code">{a.code}</span>}
                   <h4>{a.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">

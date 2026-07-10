@@ -144,6 +144,7 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                 />
 
                 <div className="card-header">
+                  {p.code && <span className="entity-code">{p.code}</span>}
                   <h4>{p.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">

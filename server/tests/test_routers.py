@@ -30,6 +30,7 @@ def test_create_problem_router(client, mock_db):
     data = res.json()
     assert data["title"] == "DB Lock"
     assert data["id"] == "60b8d5a1b55a8b0c848b4567"
+    assert data["code"] == "PBM-001"
 
 
 def test_create_solution_relationship_validation(client, mock_db):
@@ -231,10 +232,10 @@ def test_fetch_readme_api_error(client, monkeypatch):
 def test_create_app_success(client, mock_db):
     from datetime import datetime
     mock_db.solutions.find_one = AsyncMock(
-        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "code": "SOL-001", "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
     )
     mock_db.problems.find_one = AsyncMock(
-        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
+        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "code": "PBM-001", "title": "DB Lock"}
     )
     mock_db.apps.insert_one = AsyncMock(
         return_value=type(
@@ -247,6 +248,7 @@ def test_create_app_success(client, mock_db):
         return_value={
             "_id": ObjectId("60b8d5a1b55a8b0c848b4580"),
             "title": "Cache Monitor Admin",
+            "code": "APP-001",
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
@@ -269,10 +271,12 @@ def test_create_app_success(client, mock_db):
     assert res.status_code == 201
     data = res.json()
     assert data["title"] == "Cache Monitor Admin"
+    assert data["code"] == "APP-001"
     assert data["github_url"] == "https://github.com/owner/repo"
     assert data["live_url"] == "https://myprototype.vercel.app"
     assert data["solution"]["title"] == "Fix locks"
     assert data["problem"]["title"] == "DB Lock"
+    assert data["problem"]["code"] == "PBM-001"
 
 
 def test_create_app_invalid_solution(client, mock_db):

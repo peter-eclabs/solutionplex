@@ -1,30 +1,36 @@
 export interface ProblemShort {
   id: string;
+  code?: string | null;
   title: string;
 }
 
 export interface SolutionShort {
   id: string;
+  code?: string | null;
   title: string;
 }
 
 export interface ArchitectureShort {
   id: string;
+  code?: string | null;
   title: string;
 }
 
 export interface InfrastructureShort {
   id: string;
+  code?: string | null;
   title: string;
 }
 
 export interface AppShort {
   id: string;
+  code?: string | null;
   title: string;
 }
 
 export interface Problem {
   id: string;
+  code?: string | null;
   title: string;
   description: string;
   solutions: SolutionShort[];
@@ -34,6 +40,7 @@ export interface Problem {
 
 export interface Architecture {
   id: string;
+  code?: string | null;
   title: string;
   description: string;
   created_at: string;
@@ -42,6 +49,7 @@ export interface Architecture {
 
 export interface Infrastructure {
   id: string;
+  code?: string | null;
   title: string;
   description: string;
   created_at: string;
@@ -50,6 +58,7 @@ export interface Infrastructure {
 
 export interface Solution {
   id: string;
+  code?: string | null;
   title: string;
   description: string;
   problem: ProblemShort | null;
@@ -62,6 +71,7 @@ export interface Solution {
 
 export interface AppPrototype {
   id: string;
+  code?: string | null;
   title: string;
   description: string;
   github_url: string;

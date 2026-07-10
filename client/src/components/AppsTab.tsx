@@ -76,6 +76,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                   onDeleted={() => queryClient.invalidateQueries({ queryKey: ['apps'] })}
                 />
                 <div className="card-header">
+                  {app.code && <span className="entity-code">{app.code}</span>}
                   <h4>{app.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">

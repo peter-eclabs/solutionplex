@@ -4,11 +4,13 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
+from server.database.client import next_code
 from server.schemas.models import ProblemCreate, ProblemUpdate
 
 
 async def create_problem(data: ProblemCreate) -> dict:
     doc = data.model_dump()
+    doc["code"] = await next_code("PBM")
     doc["created_at"] = datetime.utcnow()
     doc["updated_at"] = doc["created_at"]
     result = await client.problems_col.insert_one(doc)

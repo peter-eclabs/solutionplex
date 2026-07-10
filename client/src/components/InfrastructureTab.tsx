@@ -143,6 +143,7 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                   onDeleted={() => queryClient.invalidateQueries({ queryKey: ['infrastructures'] })}
                 />
                 <div className="card-header">
+                  {i.code && <span className="entity-code">{i.code}</span>}
                   <h4>{i.title}</h4>
                 </div>
                 <div className="card-desc card-desc-preview">

@@ -59,7 +59,9 @@ async def populate_solution(s: dict) -> dict:
     # Resolve problem details
     prob = await client.problems_col.find_one({"_id": s["problem_id"]})
     s["problem"] = (
-        {"id": str(prob["_id"]), "title": prob["title"]} if prob else None
+        {"id": str(prob["_id"]), "code": prob.get("code"), "title": prob["title"]}
+        if prob
+        else None
     )
 
     # Resolve architecture details
@@ -68,7 +70,8 @@ async def populate_solution(s: dict) -> dict:
     )
     archs = await arch_cursor.to_list(length=100)
     s["architectures"] = [
-        {"id": str(a["_id"]), "title": a["title"]} for a in archs
+        {"id": str(a["_id"]), "code": a.get("code"), "title": a["title"]}
+        for a in archs
     ]
 
     # Resolve infrastructure details
@@ -77,14 +80,16 @@ async def populate_solution(s: dict) -> dict:
     )
     infras = await infra_cursor.to_list(length=100)
     s["infrastructures"] = [
-        {"id": str(i["_id"]), "title": i["title"]} for i in infras
+        {"id": str(i["_id"]), "code": i.get("code"), "title": i["title"]}
+        for i in infras
     ]
 
     # Resolve apps referencing this solution
     app_cursor = client.apps_col.find({"solution_id": s["_id"]})
     apps = await app_cursor.to_list(length=100)
     s["apps"] = [
-        {"id": str(a["_id"]), "title": a["title"]} for a in apps
+        {"id": str(a["_id"]), "code": a.get("code"), "title": a["title"]}
+        for a in apps
     ]
     return s
 

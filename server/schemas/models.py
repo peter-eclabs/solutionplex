@@ -23,26 +23,31 @@ PyObjectId = Annotated[
 # Reference Types for populated responses
 class ProblemShort(BaseModel):
     id: str
+    code: Optional[str] = None
     title: str
 
 
 class SolutionShort(BaseModel):
     id: str
+    code: Optional[str] = None
     title: str
 
 
 class ArchitectureShort(BaseModel):
     id: str
+    code: Optional[str] = None
     title: str
 
 
 class InfrastructureShort(BaseModel):
     id: str
+    code: Optional[str] = None
     title: str
 
 
 class AppShort(BaseModel):
     id: str
+    code: Optional[str] = None
     title: str
 
 
@@ -59,6 +64,7 @@ class ProblemUpdate(BaseModel):
 
 class ProblemResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    code: Optional[str] = None
     title: str
     description: str
     solutions: List[SolutionShort] = []
@@ -85,6 +91,7 @@ class ArchitectureUpdate(BaseModel):
 
 class ArchitectureResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    code: Optional[str] = None
     title: str
     description: str
     created_at: datetime
@@ -110,6 +117,7 @@ class InfrastructureUpdate(BaseModel):
 
 class InfrastructureResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    code: Optional[str] = None
     title: str
     description: str
     created_at: datetime
@@ -176,6 +184,7 @@ class AppUpdate(BaseModel):
 
 class AppResponse(BaseModel):
     id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    code: Optional[str] = None
     title: str
     description: str
     github_url: str

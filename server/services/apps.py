@@ -8,6 +8,7 @@ from bson import ObjectId
 import httpx
 
 from server.database import client
+from server.database.client import next_code
 from server.schemas.models import AppCreate, AppUpdate
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ async def create_app(data: AppCreate) -> dict:
         "github_url": data.github_url,
         "live_url": data.live_url,
         "solution_id": sol_object_id,
+        "code": await next_code("APP"),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -44,10 +46,12 @@ async def populate_app(a: dict) -> dict:
     if sol_id:
         sol = await client.solutions_col.find_one({"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id})
         if sol:
-            a["solution"] = {"id": str(sol["_id"]), "title": sol["title"]}
+            a["solution"] = {"id": str(sol["_id"]), "code": sol.get("code"), "title": sol["title"]}
             prob = await client.problems_col.find_one({"_id": sol["problem_id"]})
             a["problem"] = (
-                {"id": str(prob["_id"]), "title": prob["title"]} if prob else None
+                {"id": str(prob["_id"]), "code": prob.get("code"), "title": prob["title"]}
+                if prob
+                else None
             )
         else:
             a["solution"] = None

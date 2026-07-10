@@ -14,6 +14,7 @@ def mock_db(monkeypatch):
     mock_db.architectures = AsyncMock()
     mock_db.infrastructures = AsyncMock()
     mock_db.apps = AsyncMock()
+    mock_db.counters = AsyncMock()
 
     # Configure find method to return a synchronous mock cursor (which has async to_list)
     for col in [
@@ -27,6 +28,18 @@ def mock_db(monkeypatch):
         cursor.to_list = AsyncMock(return_value=[])
         col.find = MagicMock(return_value=cursor)
 
+    # Counters collection: simulate an incrementing sequence per prefix.
+    # find_one_and_update is called with (filter, update, upsert=, return_document=)
+    # so the prefix lives in filter["_id"].
+    seq = {"PBM": 0, "ARC": 0, "INF": 0, "APP": 0}
+
+    def fake_next(filter_doc, *args, **kwargs):
+        prefix = filter_doc["_id"]
+        seq[prefix] = seq.get(prefix, 0) + 1
+        return {"_id": prefix, "seq": seq[prefix]}
+
+    mock_db.counters.find_one_and_update = AsyncMock(side_effect=fake_next)
+
     # Mock the client module-level db reference
     monkeypatch.setattr("server.database.client.problems_col", mock_db.problems)
     monkeypatch.setattr("server.database.client.solutions_col", mock_db.solutions)
@@ -37,6 +50,7 @@ def mock_db(monkeypatch):
         "server.database.client.infrastructures_col", mock_db.infrastructures
     )
     monkeypatch.setattr("server.database.client.apps_col", mock_db.apps)
+    monkeypatch.setattr("server.database.client.counters_col", mock_db.counters)
 
     return mock_db
 

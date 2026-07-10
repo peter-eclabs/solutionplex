@@ -4,11 +4,13 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
+from server.database.client import next_code
 from server.schemas.models import ArchitectureCreate, ArchitectureUpdate
 
 
 async def create_architecture(data: ArchitectureCreate) -> dict:
     doc = data.model_dump()
+    doc["code"] = await next_code("ARC")
     doc["created_at"] = datetime.utcnow()
     doc["updated_at"] = doc["created_at"]
     result = await client.architectures_col.insert_one(doc)

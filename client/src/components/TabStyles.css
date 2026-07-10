@@ -334,6 +334,44 @@
   flex-grow: 1;
 }
 
+.entity-code {
+  display: inline-block;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-dim);
+  border: 1px solid var(--accent-cyan);
+}
+
+.problem-card .entity-code {
+  color: var(--accent-problem);
+  background: var(--accent-problem-dim);
+  border-color: var(--accent-problem);
+}
+
+.arch-card .entity-code {
+  color: var(--accent-arch);
+  background: var(--accent-arch-dim);
+  border-color: var(--accent-arch);
+}
+
+.infra-card .entity-code {
+  color: var(--accent-infra);
+  background: var(--accent-infra-dim);
+  border-color: var(--accent-infra);
+}
+
+.app-card .entity-code {
+  color: var(--accent-solution);
+  background: var(--accent-solution-dim);
+  border-color: var(--accent-solution);
+}
+
 .card-timestamp {
   font-family: var(--font-mono);
   font-size: 0.7rem;
