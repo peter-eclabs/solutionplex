@@ -88,7 +88,12 @@ async def populate_solution(s: dict) -> dict:
     app_cursor = client.apps_col.find({"solution_id": s["_id"]})
     apps = await app_cursor.to_list(length=100)
     s["apps"] = [
-        {"id": str(a["_id"]), "code": a.get("code"), "title": a["title"]}
+        {
+            "id": str(a["_id"]),
+            "code": a.get("code"),
+            "title": a["title"],
+            "created_at": a.get("created_at"),
+        }
         for a in apps
     ]
     return s

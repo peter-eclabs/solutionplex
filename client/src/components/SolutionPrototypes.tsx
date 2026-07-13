@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { AppShort, AppPrototype } from '../api/client';
 import { CreateAppModal } from './CreateAppModal';
 import { useToast } from './ToastContext';
+import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
 interface SolutionPrototypesProps {
@@ -170,7 +171,12 @@ export function SolutionPrototypes({
                 className="problem-solution-link"
                 onClick={() => onNavigate(`/apps/${app.id}`)}
               >
-                <span className="problem-solution-title">{app.title}</span>
+                 <span className="problem-solution-title">{app.title}</span>
+                {app.created_at && (
+                  <span className="problem-solution-created">
+                    {formatCreatedOn(app.created_at)}
+                  </span>
+                )}
               </button>
               {removingId === app.id ? (
                 <div className="prototype-remove-menu">

@@ -26,6 +26,7 @@ export interface AppShort {
   id: string;
   code?: string | null;
   title: string;
+  created_at?: string;
 }
 
 export interface Problem {
