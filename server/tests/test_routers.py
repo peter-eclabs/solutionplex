@@ -442,3 +442,87 @@ def test_problem_solution_app_relationship(client, mock_db):
 
 
 
+
+def test_create_app_with_own_labels_no_solution(client, mock_db):
+    from datetime import datetime
+
+    arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
+    infra_id = ObjectId("60b8d5a1b55a8b0c848b4569")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4581")
+
+    mock_db.architectures.find_one = AsyncMock(
+        return_value={"_id": arch_id, "code": "ARC-001", "title": "CQRS"}
+    )
+    mock_db.infrastructures.find_one = AsyncMock(
+        return_value={"_id": infra_id, "code": "INF-001", "title": "Redis"}
+    )
+
+    inserted = {}
+
+    async def capture_insert(doc):
+        inserted["doc"] = doc
+        return type("Result", (object,), {"inserted_id": app_id})()
+
+    mock_db.apps.insert_one = AsyncMock(side_effect=capture_insert)
+
+    async def find_app(query):
+        return {
+            "_id": app_id,
+            "title": "Standalone Demo",
+            "code": "APP-002",
+            "description": "No solution link",
+            "github_url": "https://github.com/owner/standalone",
+            "live_url": None,
+            "solution_id": None,
+            "architecture_ids": [arch_id],
+            "infrastructure_ids": [infra_id],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+
+    mock_db.apps.find_one = AsyncMock(side_effect=find_app)
+
+    # populate_app resolves arch/infra via find with $in — mock cursor
+    arch_cursor = MagicMock()
+    arch_cursor.to_list = AsyncMock(
+        return_value=[{"_id": arch_id, "code": "ARC-001", "title": "CQRS"}]
+    )
+    infra_cursor = MagicMock()
+    infra_cursor.to_list = AsyncMock(
+        return_value=[{"_id": infra_id, "code": "INF-001", "title": "Redis"}]
+    )
+
+    def find_side_effect(query):
+        if "_id" in query and isinstance(query["_id"], dict) and "$in" in query["_id"]:
+            ids = query["_id"]["$in"]
+            if arch_id in ids:
+                return arch_cursor
+            if infra_id in ids:
+                return infra_cursor
+        cursor = MagicMock()
+        cursor.to_list = AsyncMock(return_value=[])
+        return cursor
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.post(
+        "/api/apps/",
+        json={
+            "title": "Standalone Demo",
+            "description": "No solution link",
+            "github_url": "https://github.com/owner/standalone",
+            "architecture_ids": [str(arch_id)],
+            "infrastructure_ids": [str(infra_id)],
+        },
+    )
+    assert res.status_code == 201, res.text
+    data = res.json()
+    assert data["solution"] is None
+    assert len(data["architectures"]) == 1
+    assert data["architectures"][0]["title"] == "CQRS"
+    assert len(data["infrastructures"]) == 1
+    assert data["infrastructures"][0]["title"] == "Redis"
+    assert inserted["doc"]["architecture_ids"] == [arch_id]
+    assert inserted["doc"]["infrastructure_ids"] == [infra_id]
+    assert inserted["doc"]["solution_id"] is None

@@ -14,6 +14,35 @@ from server.schemas.models import AppCreate, AppUpdate
 logger = logging.getLogger(__name__)
 
 
+async def _resolve_ref_ids(
+    ids: List[str], collection, label: str
+) -> List[ObjectId]:
+    """Validate each id exists in collection and return ObjectId list.
+
+    Args:
+        ids: String ObjectId values to resolve.
+        collection: MongoDB collection to look up against.
+        label: Entity name used in error messages (e.g. "architecture").
+
+    Returns:
+        List of validated ObjectIds.
+
+    Raises:
+        ValueError: If an id is invalid or the referenced document is missing.
+    """
+    object_ids: List[ObjectId] = []
+    for ref_id in ids:
+        if not ObjectId.is_valid(ref_id):
+            raise ValueError(f"Invalid {label}_id: {ref_id}")
+        exists = await collection.find_one({"_id": ObjectId(ref_id)})
+        if not exists:
+            raise ValueError(
+                f"Associated {label.capitalize()} not found: {ref_id}"
+            )
+        object_ids.append(ObjectId(ref_id))
+    return object_ids
+
+
 async def create_app(data: AppCreate) -> dict:
     sol_object_id = None
     if data.solution_id:
@@ -26,12 +55,21 @@ async def create_app(data: AppCreate) -> dict:
             raise ValueError("Associated Solution not found")
         sol_object_id = ObjectId(data.solution_id)
 
+    arch_object_ids = await _resolve_ref_ids(
+        data.architecture_ids, client.architectures_col, "architecture"
+    )
+    infra_object_ids = await _resolve_ref_ids(
+        data.infrastructure_ids, client.infrastructures_col, "infrastructure"
+    )
+
     doc = {
         "title": data.title,
         "description": data.description,
         "github_url": data.github_url,
         "live_url": data.live_url,
         "solution_id": sol_object_id,
+        "architecture_ids": arch_object_ids,
+        "infrastructure_ids": infra_object_ids,
         "code": await next_code("APP"),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
@@ -41,15 +79,54 @@ async def create_app(data: AppCreate) -> dict:
     return doc
 
 
+async def _populate_effective_labels(a: dict, sol: Optional[dict]) -> None:
+    """Resolve architectures/infrastructures onto app from solution or own ids.
+
+    When linked to a solution, inherit that solution's labels. Otherwise use the
+    app's own architecture_ids / infrastructure_ids.
+    """
+    if sol is not None:
+        arch_ids = sol.get("architecture_ids", [])
+        infra_ids = sol.get("infrastructure_ids", [])
+    else:
+        arch_ids = a.get("architecture_ids", [])
+        infra_ids = a.get("infrastructure_ids", [])
+
+    arch_cursor = client.architectures_col.find({"_id": {"$in": arch_ids}})
+    archs = await arch_cursor.to_list(length=100)
+    a["architectures"] = [
+        {"id": str(x["_id"]), "code": x.get("code"), "title": x["title"]}
+        for x in archs
+    ]
+
+    infra_cursor = client.infrastructures_col.find({"_id": {"$in": infra_ids}})
+    infras = await infra_cursor.to_list(length=100)
+    a["infrastructures"] = [
+        {"id": str(x["_id"]), "code": x.get("code"), "title": x["title"]}
+        for x in infras
+    ]
+
+
 async def populate_app(a: dict) -> dict:
+    sol: Optional[dict] = None
     sol_id = a.get("solution_id")
     if sol_id:
-        sol = await client.solutions_col.find_one({"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id})
+        sol = await client.solutions_col.find_one(
+            {"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id}
+        )
         if sol:
-            a["solution"] = {"id": str(sol["_id"]), "code": sol.get("code"), "title": sol["title"]}
+            a["solution"] = {
+                "id": str(sol["_id"]),
+                "code": sol.get("code"),
+                "title": sol["title"],
+            }
             prob = await client.problems_col.find_one({"_id": sol["problem_id"]})
             a["problem"] = (
-                {"id": str(prob["_id"]), "code": prob.get("code"), "title": prob["title"]}
+                {
+                    "id": str(prob["_id"]),
+                    "code": prob.get("code"),
+                    "title": prob["title"],
+                }
                 if prob
                 else None
             )
@@ -64,6 +141,8 @@ async def populate_app(a: dict) -> dict:
         a["solutions"] = [a["solution"]]
     else:
         a["solutions"] = []
+
+    await _populate_effective_labels(a, sol)
     return a
 
 
@@ -102,7 +181,9 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
         return None
 
     update_fields = {
-        k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None or k == "solution_id"
+        k: v
+        for k, v in data.model_dump(exclude_unset=True).items()
+        if v is not None or k == "solution_id"
     }
 
     if "solution_id" in update_fields:
@@ -118,6 +199,22 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
             update_fields["solution_id"] = ObjectId(s_id)
         else:
             update_fields["solution_id"] = None
+
+    if "architecture_ids" in update_fields:
+        raw_arch = update_fields["architecture_ids"] or []
+        update_fields["architecture_ids"] = await _resolve_ref_ids(
+            list(raw_arch),
+            client.architectures_col,
+            "architecture",
+        )
+
+    if "infrastructure_ids" in update_fields:
+        raw_infra = update_fields["infrastructure_ids"] or []
+        update_fields["infrastructure_ids"] = await _resolve_ref_ids(
+            list(raw_infra),
+            client.infrastructures_col,
+            "infrastructure",
+        )
 
     if not update_fields:
         return await get_app(app_id)
