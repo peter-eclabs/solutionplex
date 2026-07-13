@@ -1611,8 +1611,10 @@
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-grid);
   border-radius: var(--radius-sm);
-  max-height: 220px;
+  /* Fixed viewport (~5 options); remaining items scroll or are filtered via search */
+  max-height: var(--dropdown-max-height);
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1000;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   animation: fadeInCustomSelect 0.15s ease-out;
@@ -1632,12 +1634,69 @@
   background: var(--border-hover);
 }
 
-.custom-select-option {
-  padding: 0.65rem 0.8rem;
+/* When a search field sits above options, only the options list scrolls (5 rows). */
+.custom-select-dropdown-with-search {
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.custom-select-filter {
+  flex-shrink: 0;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border-grid);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 0.85rem;
+  padding: 0.55rem 0.8rem;
+  outline: none;
+}
+
+.custom-select-filter::placeholder {
+  color: var(--text-muted);
+}
+
+.custom-select-filter:focus {
+  border-bottom-color: var(--accent-cyan);
+}
+
+.custom-select-options {
+  max-height: var(--dropdown-max-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.custom-select-options::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-select-options::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+.custom-select-options::-webkit-scrollbar-thumb {
+  background: var(--border-grid);
+  border-radius: var(--radius-sm);
+}
+.custom-select-options::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+.custom-select-option {
+  box-sizing: border-box;
+  min-height: var(--dropdown-option-height);
+  height: var(--dropdown-option-height);
+  padding: 0 0.8rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  line-height: 1.2;
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .custom-select-option:hover {
@@ -1650,6 +1709,18 @@
   background-color: rgba(0, 216, 246, 0.08);
   color: var(--accent-cyan);
   font-weight: 500;
+}
+
+.custom-select-option.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+.custom-select-option.is-disabled:hover {
+  background-color: transparent;
+  color: var(--text-secondary);
+  padding-left: 0.8rem;
 }
 
 @keyframes fadeInCustomSelect {
@@ -2182,8 +2253,8 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  max-height: 220px;
+  gap: 0;
+  max-height: var(--dropdown-max-height);
   overflow-y: auto;
 }
 

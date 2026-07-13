@@ -33,6 +33,11 @@
   --radius-sm: 2px;
   --radius-md: 6px;
   --radius-lg: 10px;
+
+  /* Dropdown menus: show N rows, scroll/search for the rest */
+  --dropdown-visible-items: 5;
+  --dropdown-option-height: 2.4rem;
+  --dropdown-max-height: calc(var(--dropdown-visible-items) * var(--dropdown-option-height));
   
   /* Smooth Animations */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);

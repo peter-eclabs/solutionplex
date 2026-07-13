@@ -108,7 +108,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
       style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 2000 }}
     >
       {availableOptions.length === 0 ? (
-        <div className="multi-select-empty">
+        <div className="multi-select-empty custom-select-option is-disabled" style={{ cursor: 'default' }}>
           {query.trim() !== '' ? 'No matches found' : emptyText}
         </div>
       ) : (
@@ -117,6 +117,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
             key={opt.value}
             className="custom-select-option"
             onClick={() => handleAdd(opt.value)}
+            title={opt.label}
           >
             {opt.label}
           </div>

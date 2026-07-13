@@ -283,7 +283,7 @@ export function CreateAppModal({
                       {solutions.filter((s) =>
                         s.title.toLowerCase().includes(searchQuery.toLowerCase())
                       ).length === 0 && (
-                        <div className="multi-select-empty" style={{ padding: '0.65rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        <div className="custom-select-option is-disabled" style={{ cursor: 'default' }}>
                           No matches found
                         </div>
                       )}

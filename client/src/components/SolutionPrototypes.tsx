@@ -24,7 +24,8 @@ export function SolutionPrototypes({
   const { showToast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [linkableApps, setLinkableApps] = useState<AppPrototype[]>([]);
+  const [allApps, setAllApps] = useState<AppPrototype[]>([]);
+  const [isLoadingApps, setIsLoadingApps] = useState(false);
   const [search, setSearch] = useState('');
   const [linkError, setLinkError] = useState('');
   const [isLinkOpen, setIsLinkOpen] = useState(false);
@@ -35,15 +36,26 @@ export function SolutionPrototypes({
 
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const loadLinkable = useCallback(async () => {
+  const openLinkDropdown = useCallback(() => {
+    const rect = dropdownRef.current?.getBoundingClientRect();
+    if (rect) setLinkCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setIsDropdownOpen(true);
+  }, []);
+
+  const loadAllApps = useCallback(async () => {
+    setIsLoadingApps(true);
     try {
       const all = await api.getApps();
-      setLinkableApps(all.filter((a) => a.solution?.id !== solutionId));
+      setAllApps(all);
+      // Open the list once data is ready so existing Apps-tab prototypes are visible.
+      requestAnimationFrame(() => openLinkDropdown());
     } catch (err: unknown) {
       if (err instanceof Error) setLinkError(`Failed to load prototypes: ${err.message}`);
       else setLinkError('Failed to load prototypes');
+    } finally {
+      setIsLoadingApps(false);
     }
-  }, [solutionId]);
+  }, [openLinkDropdown]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -73,20 +85,16 @@ export function SolutionPrototypes({
     };
   }, [isDropdownOpen]);
 
-  const openLinkDropdown = () => {
-    const rect = dropdownRef.current?.getBoundingClientRect();
-    if (rect) setLinkCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    setIsDropdownOpen(true);
-  };
-
   useEffect(() => {
     if (isLinkOpen) {
       setSearch('');
       setLinkError('');
+      setAllApps([]);
       setIsDropdownOpen(false);
-      loadLinkable();
+      setLinkCoords(null);
+      loadAllApps();
     }
-  }, [isLinkOpen, loadLinkable]);
+  }, [isLinkOpen, loadAllApps]);
 
   const linkApp = async (appId: string) => {
     try {
@@ -124,9 +132,10 @@ export function SolutionPrototypes({
     }
   };
 
-  const filteredApps = linkableApps.filter((a) =>
-    a.title.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  const query = search.trim().toLowerCase();
+  const filteredApps = allApps.filter((a) => a.title.toLowerCase().includes(query));
+  const isAlreadyLinked = (a: AppPrototype) => a.solution?.id === solutionId;
+  const linkableCount = filteredApps.filter((a) => !isAlreadyLinked(a)).length;
 
   return (
     <div className="solution-prototypes-section" onClick={(e) => e.stopPropagation()}>
@@ -270,7 +279,7 @@ export function SolutionPrototypes({
                       value={search}
                       onChange={(e) => {
                         setSearch(e.target.value);
-                        setIsDropdownOpen(true);
+                        openLinkDropdown();
                       }}
                       onFocus={() => openLinkDropdown()}
                       placeholder="Type to search prototypes..."
@@ -304,23 +313,63 @@ export function SolutionPrototypes({
                       ref={linkListRef}
                       style={{ position: 'fixed', top: linkCoords.top, left: linkCoords.left, width: linkCoords.width, zIndex: 2000 }}
                     >
-                      {filteredApps.length === 0 ? (
+                      {isLoadingApps ? (
+                        <div className="custom-select-option" style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                          Loading prototypes…
+                        </div>
+                      ) : allApps.length === 0 ? (
+                        <div className="custom-select-option" style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                          No prototypes registered yet. Create one first.
+                        </div>
+                      ) : filteredApps.length === 0 ? (
                         <div className="custom-select-option" style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
                           No matching prototypes
                         </div>
                       ) : (
-                        filteredApps.map((a) => (
-                          <div
-                            key={a.id}
-                            className="custom-select-option"
-                            onClick={() => {
-                              linkApp(a.id);
-                              setIsDropdownOpen(false);
-                            }}
-                          >
-                            {a.title}
-                          </div>
-                        ))
+                        <>
+                          {filteredApps.map((a) => {
+                            const linked = isAlreadyLinked(a);
+                            const suffix = linked
+                              ? ' (already linked)'
+                              : a.solution
+                                ? ` → ${a.solution.title}`
+                                : '';
+                            return (
+                              <div
+                                key={a.id}
+                                className={`custom-select-option${linked ? ' is-disabled' : ''}`}
+                                title={
+                                  linked
+                                    ? 'Already linked to this solution'
+                                    : a.solution
+                                      ? `Currently linked to ${a.solution.title} — will reassign`
+                                      : a.title
+                                }
+                                onClick={() => {
+                                  if (linked) return;
+                                  linkApp(a.id);
+                                  setIsDropdownOpen(false);
+                                }}
+                              >
+                                {a.title}{suffix}
+                              </div>
+                            );
+                          })}
+                          {linkableCount === 0 && (
+                            <div
+                              className="custom-select-option is-disabled"
+                              style={{
+                                borderTop: '1px solid var(--border-grid)',
+                                cursor: 'default',
+                                height: 'auto',
+                                minHeight: 'var(--dropdown-option-height)',
+                                whiteSpace: 'normal',
+                              }}
+                            >
+                              All matching prototypes are already linked to this solution.
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>,
                     document.body
