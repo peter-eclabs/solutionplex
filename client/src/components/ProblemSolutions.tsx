@@ -3,6 +3,8 @@ import { api } from '../api/client';
 import type { Solution, Architecture, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
 import { DeleteButton } from './DeleteButton';
+import { LabelPreview } from './LabelPreview';
+import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
 interface ProblemSolutionsProps {
@@ -12,9 +14,6 @@ interface ProblemSolutionsProps {
   onChanged: () => void;
   onNavigate: (path: string) => void;
 }
-
-const previewDescription = (text: string, max = 120): string =>
-  text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
 export function ProblemSolutions({
   problemId,
@@ -132,23 +131,15 @@ export function ProblemSolutions({
                 onClick={() => onNavigate(`/solutions/${s.id}`)}
               >
                 <span className="problem-solution-title">{s.title}</span>
-                <span className="problem-solution-desc">
-                  {previewDescription(s.description)}
+                <span className="problem-solution-created">
+                  {formatCreatedOn(s.created_at)}
                 </span>
-                {(s.architectures.length > 0 || s.infrastructures.length > 0) && (
-                  <span className="problem-solution-tags">
-                    {s.architectures.map((a) => (
-                      <span key={a.id} className="solution-tag tag-arch">
-                        {a.title}
-                      </span>
-                    ))}
-                    {s.infrastructures.map((i) => (
-                      <span key={i.id} className="solution-tag tag-infra">
-                        {i.title}
-                      </span>
-                    ))}
-                  </span>
-                )}
+                <span className="problem-solution-tags">
+                  <LabelPreview
+                    architectures={s.architectures ?? []}
+                    infrastructures={s.infrastructures ?? []}
+                  />
+                </span>
               </button>
             </li>
           ))}
