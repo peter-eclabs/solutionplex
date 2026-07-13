@@ -24,3 +24,6 @@ Thumbs.db
 
 # Brainstorm / agent scratch
 .superpowers/
+
+# Git worktrees
+.worktrees/
