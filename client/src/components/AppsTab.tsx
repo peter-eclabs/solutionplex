@@ -6,6 +6,7 @@ import { CreateAppModal } from './CreateAppModal';
 import { DeleteButton } from './DeleteButton';
 import { LabelPreview } from './LabelPreview';
 import { formatCreatedOn } from './formatCreatedOn';
+import { invalidatePlexCaches } from '../api/queryKeys';
 import './TabStyles.css';
 
 interface AppsTabProps {
@@ -27,7 +28,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
       <CreateAppModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        onCreated={() => queryClient.invalidateQueries({ queryKey: ['apps'] })}
+        onCreated={() => invalidatePlexCaches(queryClient)}
       />
 
       <section className="list-panel">
@@ -72,7 +73,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                 <DeleteButton
                   entityLabel="App"
                   onDelete={() => api.deleteApp(app.id)}
-                  onDeleted={() => queryClient.invalidateQueries({ queryKey: ['apps'] })}
+                  onDeleted={() => invalidatePlexCaches(queryClient)}
                 />
                 <div className="card-header">
                   {app.code && <span className="entity-code">{app.code}</span>}

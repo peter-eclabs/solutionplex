@@ -232,15 +232,25 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
         if s_id:
             if not ObjectId.is_valid(s_id):
                 raise ValueError("Invalid solution_id")
-            sol_exists = await client.solutions_col.find_one(
+            sol = await client.solutions_col.find_one(
                 {"_id": ObjectId(s_id)}
             )
-            if not sol_exists:
+            if not sol:
                 raise ValueError("Associated Solution not found")
-            # Linking only sets solution_id. Stored architecture/infrastructure
-            # ids on the app stay unchanged; card preview unions solution
-            # labels at response time in _populate_effective_labels.
             update_fields["solution_id"] = ObjectId(s_id)
+            # Re-apply the union of the app's chosen labels with the linked
+            # solution's labels on every update. This keeps inherited solution
+            # labels present when the user adds/removes labels on the app card.
+            if "architecture_ids" in update_fields:
+                update_fields["architecture_ids"] = _union_ref_ids(
+                    list(update_fields["architecture_ids"] or []),
+                    list(sol.get("architecture_ids") or []),
+                )
+            if "infrastructure_ids" in update_fields:
+                update_fields["infrastructure_ids"] = _union_ref_ids(
+                    list(update_fields["infrastructure_ids"] or []),
+                    list(sol.get("infrastructure_ids") or []),
+                )
         else:
             # Unlinking: materialize concepts the card was inheriting so labels
             # still show on the app preview after the solution link is cleared.

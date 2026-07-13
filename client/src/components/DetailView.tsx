@@ -9,6 +9,7 @@ import { CustomSelect } from './CustomSelect';
 import { MultiSelect } from './MultiSelect';
 import { ProblemSolutions } from './ProblemSolutions';
 import { SolutionPrototypes } from './SolutionPrototypes';
+import { invalidatePlexCaches } from '../api/queryKeys';
 
 interface DetailViewProps {
   component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
@@ -221,12 +222,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           github_url: editGithubUrl.trim(),
           live_url: editLiveUrl.trim() || undefined,
         };
-        // Standalone apps own their architecture/infrastructure; solution-linked
-        // apps inherit them from the linked solution, so only send for standalone.
-        if (!appData?.solution) {
-          appUpdate.architecture_ids = editArchIds;
-          appUpdate.infrastructure_ids = editInfraIds;
-        }
+        // Architecture/infrastructure are always editable and saved explicitly,
+        // letting linked apps override the values inherited from their solution.
+        appUpdate.architecture_ids = editArchIds;
+        appUpdate.infrastructure_ids = editInfraIds;
         return api.updateApp(id, appUpdate);
       }
     },
@@ -241,16 +240,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     try {
       await updateMutation.mutateAsync();
       setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: [component, id] });
-      if (component === 'solutions' || component === 'apps') {
-        queryClient.invalidateQueries({ queryKey: ['detail-lookups'] });
-      }
-      // Linking/unlinking an app changes effective label chips on app list cards
-      // and may change solution prototype lists.
-      if (component === 'apps') {
-        queryClient.invalidateQueries({ queryKey: ['apps'] });
-        queryClient.invalidateQueries({ queryKey: ['solutions'] });
-      }
+      // Detail payload + any plex-related lists (effective solution chips, app labels)
+      await queryClient.invalidateQueries({ queryKey: [component, id] });
+      invalidatePlexCaches(queryClient);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -495,8 +487,6 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               {/* Special inputs for Apps */}
               {component === 'apps' && (
                 <>
-                  {!appData?.solution && (
-                    <>
                       <div className="form-field">
                         <label>Architecture Designs (1:N)</label>
                         <MultiSelect
@@ -520,8 +510,6 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                           emptyText="No infrastructure available"
                         />
                       </div>
-                    </>
-                  )}
 
                   <div className="form-field">
                     <label htmlFor="app-github-edit">GitHub Repo URL</label>
@@ -569,7 +557,12 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                       problemId={problemData.id}
                       problemTitle={problemData.title}
                       solutions={problemSolutions}
-                      onChanged={() => queryClient.invalidateQueries({ queryKey: ['problems', problemData.id] })}
+                      onChanged={() => {
+                        invalidatePlexCaches(queryClient);
+                        void queryClient.invalidateQueries({
+                          queryKey: ['problems', problemData.id],
+                        });
+                      }}
                       onNavigate={onNavigate}
                     />
                   )}
@@ -593,9 +586,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                     apps={solutionData.apps}
                     onChanged={() => {
                       // Prototypes list, solution effective chips (problem rows), app cards
-                      queryClient.invalidateQueries({ queryKey: ['solutions'] });
-                      queryClient.invalidateQueries({ queryKey: ['apps'] });
-                      queryClient.invalidateQueries({ queryKey: ['problems'] });
+                      invalidatePlexCaches(queryClient);
+                      void queryClient.invalidateQueries({
+                        queryKey: ['solutions', solutionData.id],
+                      });
                     }}
                     onNavigate={onNavigate}
                   />

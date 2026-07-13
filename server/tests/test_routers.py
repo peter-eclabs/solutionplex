@@ -977,6 +977,113 @@ def test_unlink_app_materializes_solution_labels(client, mock_db):
     assert stored["doc"]["infrastructure_ids"] == [infra_sol]
 
 
+def test_update_linked_app_unions_solution_labels(client, mock_db):
+    """Editing a linked app re-applies the union of its labels with the
+    linked solution's labels, so inherited solution labels are not dropped."""
+    from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_own = ObjectId("60b8d5a1b55a8b0c848b4578")
+    arch_sol = ObjectId("60b8d5a1b55a8b0c848b4568")
+    arch_new = ObjectId("60b8d5a1b55a8b0c848b4571")
+    infra_own = ObjectId("60b8d5a1b55a8b0c848b4579")
+    infra_sol = ObjectId("60b8d5a1b55a8b0c848b4569")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
+    existing = {
+        "_id": app_id,
+        "title": "Linked Proto",
+        "code": "APP-012",
+        "description": "desc",
+        "github_url": "https://github.com/owner/repo",
+        "live_url": None,
+        "solution_id": sol_id,
+        "architecture_ids": [arch_own],
+        "infrastructure_ids": [infra_own],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    solution = {
+        "_id": sol_id,
+        "code": "SOL-001",
+        "title": "Fix locks",
+        "problem_id": problem_id,
+        "architecture_ids": [arch_sol],
+        "infrastructure_ids": [infra_sol],
+    }
+    stored = {"doc": dict(existing)}
+
+    async def find_app(query):
+        return dict(stored["doc"])
+
+    async def update_app_doc(query, update):
+        stored["doc"].update(update.get("$set", {}))
+        return type("R", (object,), {"modified_count": 1})()
+
+    mock_db.apps.find_one = AsyncMock(side_effect=find_app)
+    mock_db.apps.update_one = AsyncMock(side_effect=update_app_doc)
+    mock_db.solutions.find_one = AsyncMock(return_value=solution)
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
+    )
+
+    arch_docs = {
+        arch_own: {"_id": arch_own, "code": "ARC-OWN", "title": "OwnArch"},
+        arch_sol: {"_id": arch_sol, "code": "ARC-SOL", "title": "SolArch"},
+        arch_new: {"_id": arch_new, "code": "ARC-NEW", "title": "NewArch"},
+    }
+    infra_docs = {
+        infra_own: {"_id": infra_own, "code": "INF-OWN", "title": "OwnInfra"},
+        infra_sol: {"_id": infra_sol, "code": "INF-SOL", "title": "SolInfra"},
+    }
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        docs = [arch_docs[i] for i in ids if i in arch_docs]
+        if not docs:
+            docs = [infra_docs[i] for i in ids if i in infra_docs]
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=docs)
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    # Send only the app's own label, omitting the solution's label.
+    res = client.put(
+        f"/api/apps/{app_id}",
+        json={
+            "solution_id": str(sol_id),
+            "architecture_ids": [str(arch_own)],
+            "infrastructure_ids": [str(infra_own)],
+        },
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    # Stored labels are the union of the app's choice and the solution's labels.
+    assert set(stored["doc"]["architecture_ids"]) == {arch_own, arch_sol}
+    assert set(stored["doc"]["infrastructure_ids"]) == {infra_own, infra_sol}
+    assert {a["title"] for a in data["architectures"]} == {"OwnArch", "SolArch"}
+    assert {i["title"] for i in data["infrastructures"]} == {"OwnInfra", "SolInfra"}
+
+    # Adding a brand-new app label keeps the solution label too.
+    res = client.put(
+        f"/api/apps/{app_id}",
+        json={
+            "solution_id": str(sol_id),
+            "architecture_ids": [str(arch_own), str(arch_new)],
+            "infrastructure_ids": [str(infra_own)],
+        },
+    )
+    assert res.status_code == 200, res.text
+    assert set(stored["doc"]["architecture_ids"]) == {arch_own, arch_sol, arch_new}
+
+
 def test_delete_architecture_pulls_from_apps(client, mock_db):
     arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
     mock_db.architectures.delete_one = AsyncMock(
