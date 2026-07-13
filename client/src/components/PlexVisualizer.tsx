@@ -488,7 +488,15 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    const outerItems: { id: string; label: string; type: 'problem' | 'solution'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    const outerItems: {
+      id: string;
+      label: string;
+      type: 'problem' | 'solution' | 'architecture' | 'infrastructure';
+      icon: string;
+      grad: string;
+      isCategory?: boolean;
+      items?: { id: string; title: string }[];
+    }[] = [];
     if (app.problem) {
       outerItems.push({
         id: app.problem.id,
@@ -518,6 +526,48 @@ export function PlexVisualizer({
         grad: 'grad-sol-app',
         isCategory: true,
         items: sols.map((s) => ({ id: s.id, title: s.title })),
+      });
+    }
+
+    const archs = app.architectures || [];
+    if (archs.length === 1) {
+      outerItems.push({
+        id: archs[0].id,
+        label: archs[0].title,
+        type: 'architecture',
+        icon: 'architecture',
+        grad: 'grad-sol-arch',
+      });
+    } else if (archs.length > 1) {
+      outerItems.push({
+        id: 'cat-architecture',
+        label: 'Architecture',
+        type: 'architecture',
+        icon: 'architecture',
+        grad: 'grad-sol-arch',
+        isCategory: true,
+        items: archs.map((a) => ({ id: a.id, title: a.title })),
+      });
+    }
+
+    const infras = app.infrastructures || [];
+    if (infras.length === 1) {
+      outerItems.push({
+        id: infras[0].id,
+        label: infras[0].title,
+        type: 'infrastructure',
+        icon: 'infrastructure',
+        grad: 'grad-sol-infra',
+      });
+    } else if (infras.length > 1) {
+      outerItems.push({
+        id: 'cat-infrastructure',
+        label: 'Infrastructure',
+        type: 'infrastructure',
+        icon: 'infrastructure',
+        grad: 'grad-sol-infra',
+        isCategory: true,
+        items: infras.map((i) => ({ id: i.id, title: i.title })),
       });
     }
 
