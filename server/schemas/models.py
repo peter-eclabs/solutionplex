@@ -49,6 +49,7 @@ class AppShort(BaseModel):
     id: str
     code: Optional[str] = None
     title: str
+    created_at: Optional[datetime] = None
 
 
 # Problems
