@@ -526,3 +526,167 @@ def test_create_app_with_own_labels_no_solution(client, mock_db):
     assert inserted["doc"]["architecture_ids"] == [arch_id]
     assert inserted["doc"]["infrastructure_ids"] == [infra_id]
     assert inserted["doc"]["solution_id"] is None
+
+
+def test_app_inherits_solution_labels_when_linked(client, mock_db):
+    from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_sol = ObjectId("60b8d5a1b55a8b0c848b4568")
+    infra_sol = ObjectId("60b8d5a1b55a8b0c848b4569")
+    arch_own = ObjectId("60b8d5a1b55a8b0c848b4578")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": app_id,
+            "title": "Cache Monitor Admin",
+            "code": "APP-001",
+            "description": "desc",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": None,
+            "solution_id": sol_id,
+            "architecture_ids": [arch_own],
+            "infrastructure_ids": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={
+            "_id": sol_id,
+            "code": "SOL-001",
+            "title": "Fix locks",
+            "problem_id": problem_id,
+            "architecture_ids": [arch_sol],
+            "infrastructure_ids": [infra_sol],
+        }
+    )
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
+    )
+
+    arch_cursor = MagicMock()
+    arch_cursor.to_list = AsyncMock(
+        return_value=[{"_id": arch_sol, "code": "ARC-001", "title": "Instructor"}]
+    )
+    infra_cursor = MagicMock()
+    infra_cursor.to_list = AsyncMock(
+        return_value=[{"_id": infra_sol, "code": "INF-001", "title": "LangChain"}]
+    )
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        if arch_sol in ids:
+            return arch_cursor
+        if infra_sol in ids:
+            return infra_cursor
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=[])
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.get(f"/api/apps/{app_id}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["architectures"][0]["title"] == "Instructor"
+    assert data["infrastructures"][0]["title"] == "LangChain"
+    assert all(a["id"] != str(arch_own) for a in data["architectures"])
+
+
+def test_app_uses_own_labels_when_unlinked(client, mock_db):
+    from datetime import datetime
+
+    arch_own = ObjectId("60b8d5a1b55a8b0c848b4578")
+    infra_own = ObjectId("60b8d5a1b55a8b0c848b4579")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": app_id,
+            "title": "Standalone",
+            "code": "APP-003",
+            "description": "desc",
+            "github_url": "https://github.com/owner/repo",
+            "live_url": None,
+            "solution_id": None,
+            "architecture_ids": [arch_own],
+            "infrastructure_ids": [infra_own],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+
+    arch_cursor = MagicMock()
+    arch_cursor.to_list = AsyncMock(
+        return_value=[{"_id": arch_own, "code": "ARC-009", "title": "OwnArch"}]
+    )
+    infra_cursor = MagicMock()
+    infra_cursor.to_list = AsyncMock(
+        return_value=[{"_id": infra_own, "code": "INF-009", "title": "OwnInfra"}]
+    )
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        if arch_own in ids:
+            return arch_cursor
+        if infra_own in ids:
+            return infra_cursor
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=[])
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.get(f"/api/apps/{app_id}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["architectures"][0]["title"] == "OwnArch"
+    assert data["infrastructures"][0]["title"] == "OwnInfra"
+
+
+def test_delete_architecture_pulls_from_apps(client, mock_db):
+    arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
+    mock_db.architectures.delete_one = AsyncMock(
+        return_value=type("R", (object,), {"deleted_count": 1})()
+    )
+    mock_db.solutions.update_many = AsyncMock()
+    mock_db.apps.update_many = AsyncMock()
+
+    res = client.delete(f"/api/architectures/{arch_id}")
+    assert res.status_code == 200
+    mock_db.apps.update_many.assert_awaited()
+    call = mock_db.apps.update_many.await_args
+    assert call is not None
+    assert call.args[0] == {"architecture_ids": arch_id}
+    assert call.args[1] == {"$pull": {"architecture_ids": arch_id}}
+
+
+def test_delete_infrastructure_pulls_from_apps(client, mock_db):
+    infra_id = ObjectId("60b8d5a1b55a8b0c848b4569")
+    mock_db.infrastructures.delete_one = AsyncMock(
+        return_value=type("R", (object,), {"deleted_count": 1})()
+    )
+    mock_db.solutions.update_many = AsyncMock()
+    mock_db.apps.update_many = AsyncMock()
+
+    res = client.delete(f"/api/infrastructures/{infra_id}")
+    assert res.status_code == 200
+    mock_db.apps.update_many.assert_awaited()
+    call = mock_db.apps.update_many.await_args
+    assert call is not None
+    assert call.args[0] == {"infrastructure_ids": infra_id}
+    assert call.args[1] == {"$pull": {"infrastructure_ids": infra_id}}
+
