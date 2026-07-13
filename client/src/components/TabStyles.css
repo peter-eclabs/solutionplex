@@ -2128,10 +2128,9 @@
 }
 
 .problem-solution-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-top: 0.2rem;
+  display: block;
+  margin-top: 0.25rem;
+  min-width: 0;
 }
 
 .solution-tag {
@@ -2141,6 +2140,8 @@
   letter-spacing: 0.04em;
   padding: 0.1rem 0.35rem;
   border: 1px solid var(--border-grid);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tag-arch {
@@ -2151,6 +2152,58 @@
 .tag-infra {
   color: var(--accent-infra);
   border-color: var(--accent-infra);
+}
+
+/* Label preview — fixed single row + overflow */
+.label-preview {
+  position: relative;
+  width: 100%;
+  margin-top: 0.35rem;
+  min-height: 1.45rem;
+}
+
+.label-preview-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+  white-space: nowrap;
+  height: 0;
+  overflow: hidden;
+}
+
+.label-preview-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+  overflow: hidden;
+  align-items: center;
+  height: 1.45rem;
+}
+
+.tag-more {
+  color: var(--text-muted);
+  border-color: var(--border-grid);
+  background-color: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.card-created-on {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.problem-solution-created {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: normal;
+  line-height: 1.4;
 }
 
 .form-context-note {
