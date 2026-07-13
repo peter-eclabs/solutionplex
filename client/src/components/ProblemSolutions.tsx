@@ -74,6 +74,10 @@ export function ProblemSolutions({
       setError('Title and Description are required fields.');
       return;
     }
+    if (selectedArchIds.length === 0 || selectedInfraIds.length === 0) {
+      setError('Architecture Designs and Infrastructure Stacks are required.');
+      return;
+    }
     try {
       await api.createSolution({
         title: title.trim(),
@@ -220,7 +224,12 @@ export function ProblemSolutions({
                 <button
                   type="submit"
                   className="submit-btn"
-                  disabled={!title.trim() || !description.trim()}
+                  disabled={
+                    !title.trim() ||
+                    !description.trim() ||
+                    selectedArchIds.length === 0 ||
+                    selectedInfraIds.length === 0
+                  }
                 >
                   Propose Solution Card
                 </button>
