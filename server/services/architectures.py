@@ -70,4 +70,8 @@ async def delete_architecture(arch_id: str) -> bool:
         {"architecture_ids": ObjectId(arch_id)},
         {"$pull": {"architecture_ids": ObjectId(arch_id)}},
     )
+    await client.apps_col.update_many(
+        {"architecture_ids": ObjectId(arch_id)},
+        {"$pull": {"architecture_ids": ObjectId(arch_id)}},
+    )
     return True

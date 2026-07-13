@@ -71,4 +71,8 @@ async def delete_infrastructure(infra_id: str) -> bool:
         {"infrastructure_ids": ObjectId(infra_id)},
         {"$pull": {"infrastructure_ids": ObjectId(infra_id)}},
     )
+    await client.apps_col.update_many(
+        {"infrastructure_ids": ObjectId(infra_id)},
+        {"$pull": {"infrastructure_ids": ObjectId(infra_id)}},
+    )
     return True
