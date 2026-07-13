@@ -79,6 +79,8 @@ export interface AppPrototype {
   problem: ProblemShort | null;
   solutions: SolutionShort[];
   solution: SolutionShort | null;
+  architectures: ArchitectureShort[];
+  infrastructures: InfrastructureShort[];
   created_at: string;
   updated_at: string;
 }
