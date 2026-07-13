@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
 import { DeleteButton } from './DeleteButton';
+import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
@@ -16,9 +17,6 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  const previewDescription = (text: string, max = 140): string =>
-    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const { data: problems = [], isLoading: loading, error: queryError } = useQuery<Problem[]>({
     queryKey: ['problems', searchQuery],
@@ -147,9 +145,14 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                   {p.code && <span className="entity-code">{p.code}</span>}
                   <h4>{p.title}</h4>
                 </div>
-                <div className="card-desc card-desc-preview">
-                  {previewDescription(p.description)}
-                </div>
+                <p className="card-created-on">{formatCreatedOn(p.created_at)}</p>
+                {p.solutions.length > 0 ? (
+                  <p className="problem-status problem-solved">
+                    Solved — {p.solutions.length} Solution{p.solutions.length === 1 ? '' : 's'}
+                  </p>
+                ) : (
+                  <p className="problem-status problem-unsolved">Unsolved</p>
+                )}
               </article>
             ))}
           </div>
