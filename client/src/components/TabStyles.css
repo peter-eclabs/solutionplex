@@ -2190,9 +2190,18 @@
   flex-shrink: 0;
 }
 
+.card-created-on {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  font-style: normal;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .problem-status {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   margin: 0;
   line-height: 1.4;
   font-weight: 600;
@@ -2204,14 +2213,6 @@
 
 .problem-unsolved {
   color: #ff4d79;
-}
-
-.problem-solution-created {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  font-style: normal;
-  line-height: 1.4;
 }
 
 .form-context-note {
