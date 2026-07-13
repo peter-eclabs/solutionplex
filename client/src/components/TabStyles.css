@@ -2215,6 +2215,14 @@
   color: #ff4d79;
 }
 
+.problem-solution-created {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  font-style: normal;
+  line-height: 1.4;
+}
+
 .form-context-note {
   font-size: 0.78rem;
   color: var(--text-secondary);
