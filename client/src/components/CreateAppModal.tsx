@@ -110,6 +110,9 @@ export function CreateAppModal({
 
   if (!isOpen) return null;
 
+  // Creating from a solution detail: always link to that solution; no propose/arch UI.
+  const prelinkedToSolution = !!solutionId;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim() || !githubUrl.trim()) {
@@ -117,7 +120,26 @@ export function CreateAppModal({
       return;
     }
 
-    const targetSolutionId = proposeToSolution ? (solutionId ?? selectedSolutionId) : '';
+    // From solution context: link to that solution (backend copies its arch/infra).
+    if (prelinkedToSolution) {
+      try {
+        await api.createApp({
+          title: title.trim(),
+          description: description.trim(),
+          github_url: githubUrl.trim(),
+          live_url: liveUrl.trim() || undefined,
+          solution_id: solutionId,
+        });
+        onCreated();
+        onClose();
+      } catch (err: unknown) {
+        if (err instanceof Error) setError(err.message);
+        else setError('Failed to create App card');
+      }
+      return;
+    }
+
+    const targetSolutionId = proposeToSolution ? selectedSolutionId : '';
     if (proposeToSolution) {
       if (!targetSolutionId) {
         setError('Please select a Solution to propose this App to.');
@@ -146,8 +168,8 @@ export function CreateAppModal({
     }
   };
 
-  // The toggle is always shown; when pre-linked to a solution it defaults to ON.
-  const showToggle = true;
+  // Only when creating from Apps tab — solution context hides this entirely.
+  const showToggle = !prelinkedToSolution;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -157,9 +179,13 @@ export function CreateAppModal({
             &times;
           </button>
           <h3>{heading}</h3>
-          {solutionId && solutionTitle && (
+          {prelinkedToSolution && solutionTitle && (
             <p className="form-context-note">
-              Targeting solution: <strong>{solutionTitle}</strong>
+              Linked to solution: <strong>{solutionTitle}</strong>
+              <br />
+              <span style={{ opacity: 0.85 }}>
+                Architecture and infrastructure are inherited from this solution and remain on the app if unlinked later.
+              </span>
             </p>
           )}
           {error && <div className="error-banner">{error}</div>}

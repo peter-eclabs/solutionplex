@@ -6,6 +6,7 @@ import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
+import { MultiSelect } from './MultiSelect';
 import { ProblemSolutions } from './ProblemSolutions';
 import { SolutionPrototypes } from './SolutionPrototypes';
 
@@ -171,6 +172,8 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       setEditTitle(data.appData.title);
       setEditDescription(data.appData.description);
       setEditSolutionId(data.appData.solution?.id || '');
+      setEditArchIds((data.appData.architectures || []).map((a) => a.id));
+      setEditInfraIds((data.appData.infrastructures || []).map((i) => i.id));
       setEditGithubUrl(data.appData.github_url);
       setEditLiveUrl(data.appData.live_url || '');
       setReadme(data.readme);
@@ -203,13 +206,28 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       } else if (component === 'infrastructure') {
         return api.updateInfrastructure(id, { title: editTitle.trim(), description: editDescription.trim() });
       } else {
-        return api.updateApp(id, {
+        const appUpdate: {
+          title: string;
+          description: string;
+          solution_id?: string;
+          github_url: string;
+          live_url?: string;
+          architecture_ids?: string[];
+          infrastructure_ids?: string[];
+        } = {
           title: editTitle.trim(),
           description: editDescription.trim(),
           solution_id: editSolutionId || undefined,
           github_url: editGithubUrl.trim(),
           live_url: editLiveUrl.trim() || undefined,
-        });
+        };
+        // Standalone apps own their architecture/infrastructure; solution-linked
+        // apps inherit them from the linked solution, so only send for standalone.
+        if (!appData?.solution) {
+          appUpdate.architecture_ids = editArchIds;
+          appUpdate.infrastructure_ids = editInfraIds;
+        }
+        return api.updateApp(id, appUpdate);
       }
     },
   });
@@ -219,10 +237,6 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     if (!editTitle.trim() || !editDescription.trim()) {
       return;
     }
-    if (component === 'apps' && !editSolutionId) {
-      setError('Target Solution is a required field.');
-      return;
-    }
     setError('');
     try {
       await updateMutation.mutateAsync();
@@ -230,6 +244,12 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       queryClient.invalidateQueries({ queryKey: [component, id] });
       if (component === 'solutions' || component === 'apps') {
         queryClient.invalidateQueries({ queryKey: ['detail-lookups'] });
+      }
+      // Linking/unlinking an app changes effective label chips on app list cards
+      // and may change solution prototype lists.
+      if (component === 'apps') {
+        queryClient.invalidateQueries({ queryKey: ['apps'] });
+        queryClient.invalidateQueries({ queryKey: ['solutions'] });
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -475,16 +495,33 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
               {/* Special inputs for Apps */}
               {component === 'apps' && (
                 <>
-                  <div className="form-field">
-                    <label htmlFor="app-sol-edit">Target Solution (Required)</label>
-                    <CustomSelect
-                      id="app-sol-edit"
-                      value={editSolutionId}
-                      onChange={setEditSolutionId}
-                      options={allSolutions.map((s) => ({ value: s.id, label: s.title }))}
-                      placeholder="-- Select Solution Target --"
-                    />
-                  </div>
+                  {!appData?.solution && (
+                    <>
+                      <div className="form-field">
+                        <label>Architecture Designs (1:N)</label>
+                        <MultiSelect
+                          id="app-arch-edit"
+                          options={allArchs.map((arch) => ({ value: arch.id, label: arch.title }))}
+                          selectedValues={editArchIds}
+                          onChange={setEditArchIds}
+                          placeholder="Search architecture designs…"
+                          emptyText="No architectures available"
+                        />
+                      </div>
+
+                      <div className="form-field">
+                        <label>Infrastructure Stacks (1:N)</label>
+                        <MultiSelect
+                          id="app-infra-edit"
+                          options={allInfras.map((infra) => ({ value: infra.id, label: infra.title }))}
+                          selectedValues={editInfraIds}
+                          onChange={setEditInfraIds}
+                          placeholder="Search infrastructure stacks…"
+                          emptyText="No infrastructure available"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="form-field">
                     <label htmlFor="app-github-edit">GitHub Repo URL</label>
@@ -554,7 +591,12 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                     solutionId={solutionData.id}
                     solutionTitle={solutionData.title}
                     apps={solutionData.apps}
-                    onChanged={() => queryClient.invalidateQueries({ queryKey: ['solutions', solutionData.id] })}
+                    onChanged={() => {
+                      // Prototypes list, solution effective chips (problem rows), app cards
+                      queryClient.invalidateQueries({ queryKey: ['solutions'] });
+                      queryClient.invalidateQueries({ queryKey: ['apps'] });
+                      queryClient.invalidateQueries({ queryKey: ['problems'] });
+                    }}
                     onNavigate={onNavigate}
                   />
                 )}

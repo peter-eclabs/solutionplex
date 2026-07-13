@@ -136,8 +136,12 @@ export function ProblemSolutions({
                 </span>
                 <span className="problem-solution-tags">
                   <LabelPreview
-                    architectures={s.architectures ?? []}
-                    infrastructures={s.infrastructures ?? []}
+                    architectures={
+                      s.effective_architectures ?? s.architectures ?? []
+                    }
+                    infrastructures={
+                      s.effective_infrastructures ?? s.infrastructures ?? []
+                    }
                   />
                 </span>
               </button>

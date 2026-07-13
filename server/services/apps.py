@@ -43,24 +43,55 @@ async def _resolve_ref_ids(
     return object_ids
 
 
+def _union_ref_ids(*id_lists: List) -> List[str]:
+    """Ordered union of ObjectId / str id lists; first occurrence wins.
+
+    Args:
+        *id_lists: Sequences of ObjectId or string ids to merge left-to-right.
+
+    Returns:
+        Deduplicated list of string ids preserving first-seen order.
+    """
+    seen: set[str] = set()
+    result: List[str] = []
+    for id_list in id_lists:
+        for ref_id in id_list or []:
+            key = str(ref_id)
+            if key not in seen:
+                seen.add(key)
+                result.append(key)
+    return result
+
+
 async def create_app(data: AppCreate) -> dict:
     sol_object_id = None
+    sol_doc: Optional[dict] = None
     if data.solution_id:
         if not ObjectId.is_valid(data.solution_id):
             raise ValueError("Invalid solution_id")
-        sol_exists = await client.solutions_col.find_one(
+        sol_doc = await client.solutions_col.find_one(
             {"_id": ObjectId(data.solution_id)}
         )
-        if not sol_exists:
+        if not sol_doc:
             raise ValueError("Associated Solution not found")
         sol_object_id = ObjectId(data.solution_id)
 
-    arch_object_ids = await _resolve_ref_ids(
-        data.architecture_ids, client.architectures_col, "architecture"
-    )
-    infra_object_ids = await _resolve_ref_ids(
-        data.infrastructure_ids, client.infrastructures_col, "infrastructure"
-    )
+    # When linked to a solution with no explicit labels, snapshot the solution's
+    # architecture/infrastructure onto the app so they remain after unlink.
+    if (
+        sol_doc is not None
+        and not data.architecture_ids
+        and not data.infrastructure_ids
+    ):
+        arch_object_ids = list(sol_doc.get("architecture_ids") or [])
+        infra_object_ids = list(sol_doc.get("infrastructure_ids") or [])
+    else:
+        arch_object_ids = await _resolve_ref_ids(
+            data.architecture_ids, client.architectures_col, "architecture"
+        )
+        infra_object_ids = await _resolve_ref_ids(
+            data.infrastructure_ids, client.infrastructures_col, "infrastructure"
+        )
 
     doc = {
         "title": data.title,
@@ -79,32 +110,42 @@ async def create_app(data: AppCreate) -> dict:
     return doc
 
 
+async def _resolve_label_docs(id_strs: List[str], collection) -> List[dict]:
+    """Fetch arch/infra docs for id strings and return short refs in id order."""
+    if not id_strs:
+        return []
+    object_ids = [ObjectId(x) for x in id_strs]
+    cursor = collection.find({"_id": {"$in": object_ids}})
+    docs = await cursor.to_list(length=100)
+    by_id = {doc["_id"]: doc for doc in docs}
+    return [
+        {
+            "id": str(oid),
+            "code": by_id[oid].get("code"),
+            "title": by_id[oid]["title"],
+        }
+        for oid in object_ids
+        if oid in by_id
+    ]
+
+
 async def _populate_effective_labels(a: dict, sol: Optional[dict]) -> None:
-    """Resolve architectures/infrastructures onto app from solution or own ids.
+    """Resolve architectures/infrastructures onto the app for API responses.
 
-    When linked to a solution, inherit that solution's labels. Otherwise use the
-    app's own architecture_ids / infrastructure_ids.
+    App cards always show the app's own stored labels only. Linking does not
+    change them. Solution row chips use solution effective_* fields instead
+    (solution ∪ linked apps).
     """
-    if sol is not None:
-        arch_ids = sol.get("architecture_ids", [])
-        infra_ids = sol.get("infrastructure_ids", [])
-    else:
-        arch_ids = a.get("architecture_ids", [])
-        infra_ids = a.get("infrastructure_ids", [])
+    _ = sol  # Solution labels do not appear on the app card.
+    arch_id_strs = _union_ref_ids(a.get("architecture_ids") or [])
+    infra_id_strs = _union_ref_ids(a.get("infrastructure_ids") or [])
 
-    arch_cursor = client.architectures_col.find({"_id": {"$in": arch_ids}})
-    archs = await arch_cursor.to_list(length=100)
-    a["architectures"] = [
-        {"id": str(x["_id"]), "code": x.get("code"), "title": x["title"]}
-        for x in archs
-    ]
-
-    infra_cursor = client.infrastructures_col.find({"_id": {"$in": infra_ids}})
-    infras = await infra_cursor.to_list(length=100)
-    a["infrastructures"] = [
-        {"id": str(x["_id"]), "code": x.get("code"), "title": x["title"]}
-        for x in infras
-    ]
+    a["architectures"] = await _resolve_label_docs(
+        arch_id_strs, client.architectures_col
+    )
+    a["infrastructures"] = await _resolve_label_docs(
+        infra_id_strs, client.infrastructures_col
+    )
 
 
 async def populate_app(a: dict) -> dict:
@@ -191,14 +232,47 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
         if s_id:
             if not ObjectId.is_valid(s_id):
                 raise ValueError("Invalid solution_id")
-            sol = await client.solutions_col.find_one(
+            sol_exists = await client.solutions_col.find_one(
                 {"_id": ObjectId(s_id)}
             )
-            if not sol:
+            if not sol_exists:
                 raise ValueError("Associated Solution not found")
+            # Linking only sets solution_id. Stored architecture/infrastructure
+            # ids on the app stay unchanged; card preview unions solution
+            # labels at response time in _populate_effective_labels.
             update_fields["solution_id"] = ObjectId(s_id)
         else:
+            # Unlinking: materialize concepts the card was inheriting so labels
+            # still show on the app preview after the solution link is cleared.
             update_fields["solution_id"] = None
+            prev_sol_id = existing.get("solution_id")
+            if prev_sol_id:
+                prev_sol = await client.solutions_col.find_one(
+                    {
+                        "_id": (
+                            ObjectId(prev_sol_id)
+                            if isinstance(prev_sol_id, str)
+                            else prev_sol_id
+                        )
+                    }
+                )
+                if prev_sol:
+                    if "architecture_ids" not in update_fields:
+                        own_arch = existing.get("architecture_ids") or []
+                        source_arch = own_arch or (
+                            prev_sol.get("architecture_ids") or []
+                        )
+                        update_fields["architecture_ids"] = [
+                            str(x) for x in source_arch
+                        ]
+                    if "infrastructure_ids" not in update_fields:
+                        own_infra = existing.get("infrastructure_ids") or []
+                        source_infra = own_infra or (
+                            prev_sol.get("infrastructure_ids") or []
+                        )
+                        update_fields["infrastructure_ids"] = [
+                            str(x) for x in source_infra
+                        ]
 
     if "architecture_ids" in update_fields:
         raw_arch = update_fields["architecture_ids"] or []

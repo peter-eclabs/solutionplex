@@ -254,8 +254,9 @@ export function PlexVisualizer({
       });
     }
 
-    // Architectures: 1 direct, >1 category node
-    const archs = solution.architectures || [];
+    // Architectures: 1 direct, >1 category node (solution ∪ linked apps)
+    const archs =
+      solution.effective_architectures || solution.architectures || [];
     if (archs.length === 1) {
       outerItems.push({
         id: archs[0].id,
@@ -276,8 +277,9 @@ export function PlexVisualizer({
       });
     }
 
-    // Infrastructures: 1 direct, >1 category node
-    const infras = solution.infrastructures || [];
+    // Infrastructures: 1 direct, >1 category node (solution ∪ linked apps)
+    const infras =
+      solution.effective_infrastructures || solution.infrastructures || [];
     if (infras.length === 1) {
       outerItems.push({
         id: infras[0].id,

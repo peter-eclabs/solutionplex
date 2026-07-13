@@ -153,8 +153,12 @@ class SolutionResponse(BaseModel):
     title: str
     description: str
     problem: Optional[ProblemShort] = None
+    # Solution-owned labels (used for edit forms and ownership)
     architectures: List[ArchitectureShort] = []
     infrastructures: List[InfrastructureShort] = []
+    # Card preview: solution-owned ∪ linked apps' stored labels (display only)
+    effective_architectures: List[ArchitectureShort] = []
+    effective_infrastructures: List[InfrastructureShort] = []
     apps: List[AppShort] = []
     created_at: datetime
     updated_at: datetime

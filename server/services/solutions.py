@@ -5,6 +5,7 @@ from bson import ObjectId
 
 from server.database import client
 from server.schemas.models import SolutionCreate, SolutionUpdate
+from server.services.apps import _resolve_label_docs, _union_ref_ids
 
 
 async def create_solution(data: SolutionCreate) -> dict:
@@ -64,25 +65,16 @@ async def populate_solution(s: dict) -> dict:
         else None
     )
 
-    # Resolve architecture details
-    arch_cursor = client.architectures_col.find(
-        {"_id": {"$in": s.get("architecture_ids", [])}}
-    )
-    archs = await arch_cursor.to_list(length=100)
-    s["architectures"] = [
-        {"id": str(a["_id"]), "code": a.get("code"), "title": a["title"]}
-        for a in archs
-    ]
+    own_arch = s.get("architecture_ids") or []
+    own_infra = s.get("infrastructure_ids") or []
 
-    # Resolve infrastructure details
-    infra_cursor = client.infrastructures_col.find(
-        {"_id": {"$in": s.get("infrastructure_ids", [])}}
+    # Solution-owned labels (edit forms / ownership — not expanded by apps)
+    s["architectures"] = await _resolve_label_docs(
+        _union_ref_ids(own_arch), client.architectures_col
     )
-    infras = await infra_cursor.to_list(length=100)
-    s["infrastructures"] = [
-        {"id": str(i["_id"]), "code": i.get("code"), "title": i["title"]}
-        for i in infras
-    ]
+    s["infrastructures"] = await _resolve_label_docs(
+        _union_ref_ids(own_infra), client.infrastructures_col
+    )
 
     # Resolve apps referencing this solution
     app_cursor = client.apps_col.find({"solution_id": s["_id"]})
@@ -96,6 +88,19 @@ async def populate_solution(s: dict) -> dict:
         }
         for a in apps
     ]
+
+    # Card preview: solution-owned ∪ each linked app's stored labels (display only).
+    # App documents are not modified when linking.
+    app_arch_lists = [a.get("architecture_ids") or [] for a in apps]
+    app_infra_lists = [a.get("infrastructure_ids") or [] for a in apps]
+    s["effective_architectures"] = await _resolve_label_docs(
+        _union_ref_ids(own_arch, *app_arch_lists),
+        client.architectures_col,
+    )
+    s["effective_infrastructures"] = await _resolve_label_docs(
+        _union_ref_ids(own_infra, *app_infra_lists),
+        client.infrastructures_col,
+    )
     return s
 
 

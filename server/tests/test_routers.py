@@ -231,32 +231,75 @@ def test_fetch_readme_api_error(client, monkeypatch):
 
 def test_create_app_success(client, mock_db):
     from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
+    infra_id = ObjectId("60b8d5a1b55a8b0c848b4569")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
     mock_db.solutions.find_one = AsyncMock(
-        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4570"), "code": "SOL-001", "title": "Fix locks", "problem_id": ObjectId("60b8d5a1b55a8b0c848b4567")}
+        return_value={
+            "_id": sol_id,
+            "code": "SOL-001",
+            "title": "Fix locks",
+            "problem_id": problem_id,
+            "architecture_ids": [arch_id],
+            "infrastructure_ids": [infra_id],
+        }
     )
     mock_db.problems.find_one = AsyncMock(
-        return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "code": "PBM-001", "title": "DB Lock"}
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
     )
-    mock_db.apps.insert_one = AsyncMock(
-        return_value=type(
-            "Result",
-            (object,),
-            {"inserted_id": ObjectId("60b8d5a1b55a8b0c848b4580")},
-        )()
-    )
+
+    inserted = {}
+
+    async def capture_insert(doc):
+        inserted["doc"] = doc
+        return type("Result", (object,), {"inserted_id": app_id})()
+
+    mock_db.apps.insert_one = AsyncMock(side_effect=capture_insert)
     mock_db.apps.find_one = AsyncMock(
         return_value={
-            "_id": ObjectId("60b8d5a1b55a8b0c848b4580"),
+            "_id": app_id,
             "title": "Cache Monitor Admin",
             "code": "APP-001",
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "solution_id": ObjectId("60b8d5a1b55a8b0c848b4570"),
+            "solution_id": sol_id,
+            "architecture_ids": [arch_id],
+            "infrastructure_ids": [infra_id],
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
     )
+
+    arch_cursor = MagicMock()
+    arch_cursor.to_list = AsyncMock(
+        return_value=[{"_id": arch_id, "code": "ARC-001", "title": "CQRS"}]
+    )
+    infra_cursor = MagicMock()
+    infra_cursor.to_list = AsyncMock(
+        return_value=[{"_id": infra_id, "code": "INF-001", "title": "Redis"}]
+    )
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        if arch_id in ids:
+            return arch_cursor
+        if infra_id in ids:
+            return infra_cursor
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=[])
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
     res = client.post(
         "/api/apps/",
@@ -265,7 +308,7 @@ def test_create_app_success(client, mock_db):
             "description": "Core features and target users...",
             "github_url": "https://github.com/owner/repo",
             "live_url": "https://myprototype.vercel.app",
-            "solution_id": "60b8d5a1b55a8b0c848b4570",
+            "solution_id": str(sol_id),
         },
     )
     assert res.status_code == 201
@@ -277,6 +320,9 @@ def test_create_app_success(client, mock_db):
     assert data["solution"]["title"] == "Fix locks"
     assert data["problem"]["title"] == "DB Lock"
     assert data["problem"]["code"] == "PBM-001"
+    # Solution concepts are snapshotted onto the app at create time.
+    assert inserted["doc"]["architecture_ids"] == [arch_id]
+    assert inserted["doc"]["infrastructure_ids"] == [infra_id]
 
 
 def test_create_app_invalid_solution(client, mock_db):
@@ -528,7 +574,8 @@ def test_create_app_with_own_labels_no_solution(client, mock_db):
     assert inserted["doc"]["solution_id"] is None
 
 
-def test_app_inherits_solution_labels_when_linked(client, mock_db):
+def test_linked_app_card_shows_only_own_labels(client, mock_db):
+    """Linked app cards keep showing only the app's stored labels."""
     from datetime import datetime
 
     sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
@@ -567,14 +614,13 @@ def test_app_inherits_solution_labels_when_linked(client, mock_db):
         return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
     )
 
-    arch_cursor = MagicMock()
-    arch_cursor.to_list = AsyncMock(
-        return_value=[{"_id": arch_sol, "code": "ARC-001", "title": "Instructor"}]
-    )
-    infra_cursor = MagicMock()
-    infra_cursor.to_list = AsyncMock(
-        return_value=[{"_id": infra_sol, "code": "INF-001", "title": "LangChain"}]
-    )
+    arch_docs = {
+        arch_own: {"_id": arch_own, "code": "ARC-OWN", "title": "OwnArch"},
+        arch_sol: {"_id": arch_sol, "code": "ARC-SOL", "title": "SolArch"},
+    }
+    infra_docs = {
+        infra_sol: {"_id": infra_sol, "code": "INF-001", "title": "LangChain"},
+    }
 
     def find_side_effect(query):
         ids = (
@@ -582,12 +628,11 @@ def test_app_inherits_solution_labels_when_linked(client, mock_db):
             if isinstance(query.get("_id"), dict)
             else []
         )
-        if arch_sol in ids:
-            return arch_cursor
-        if infra_sol in ids:
-            return infra_cursor
+        docs = [arch_docs[i] for i in ids if i in arch_docs]
+        if not docs:
+            docs = [infra_docs[i] for i in ids if i in infra_docs]
         c = MagicMock()
-        c.to_list = AsyncMock(return_value=[])
+        c.to_list = AsyncMock(return_value=docs)
         return c
 
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
@@ -596,9 +641,9 @@ def test_app_inherits_solution_labels_when_linked(client, mock_db):
     res = client.get(f"/api/apps/{app_id}")
     assert res.status_code == 200
     data = res.json()
-    assert data["architectures"][0]["title"] == "Instructor"
-    assert data["infrastructures"][0]["title"] == "LangChain"
-    assert all(a["id"] != str(arch_own) for a in data["architectures"])
+    # App card never inherits solution labels
+    assert [a["title"] for a in data["architectures"]] == ["OwnArch"]
+    assert data["infrastructures"] == []
 
 
 def test_app_uses_own_labels_when_unlinked(client, mock_db):
@@ -655,6 +700,281 @@ def test_app_uses_own_labels_when_unlinked(client, mock_db):
     data = res.json()
     assert data["architectures"][0]["title"] == "OwnArch"
     assert data["infrastructures"][0]["title"] == "OwnInfra"
+
+
+def test_link_app_leaves_app_labels_unchanged(client, mock_db):
+    """Linking only sets solution_id; app stored + displayed labels stay the same."""
+    from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_own = ObjectId("60b8d5a1b55a8b0c848b4578")
+    arch_sol = ObjectId("60b8d5a1b55a8b0c848b4568")
+    infra_own = ObjectId("60b8d5a1b55a8b0c848b4579")
+    infra_sol = ObjectId("60b8d5a1b55a8b0c848b4569")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
+    existing = {
+        "_id": app_id,
+        "title": "Standalone Proto",
+        "code": "APP-011",
+        "description": "desc",
+        "github_url": "https://github.com/owner/repo",
+        "live_url": None,
+        "solution_id": None,
+        "architecture_ids": [arch_own],
+        "infrastructure_ids": [infra_own],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+    solution = {
+        "_id": sol_id,
+        "code": "SOL-001",
+        "title": "Fix locks",
+        "problem_id": problem_id,
+        "architecture_ids": [arch_sol],
+        "infrastructure_ids": [infra_sol],
+    }
+
+    stored = {"doc": dict(existing)}
+
+    async def find_app(query):
+        return dict(stored["doc"])
+
+    async def update_app_doc(query, update):
+        stored["doc"].update(update.get("$set", {}))
+        return type("R", (object,), {"modified_count": 1})()
+
+    mock_db.apps.find_one = AsyncMock(side_effect=find_app)
+    mock_db.apps.update_one = AsyncMock(side_effect=update_app_doc)
+    mock_db.solutions.find_one = AsyncMock(return_value=solution)
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
+    )
+
+    arch_docs = {
+        arch_own: {"_id": arch_own, "code": "ARC-OWN", "title": "OwnArch"},
+        arch_sol: {"_id": arch_sol, "code": "ARC-SOL", "title": "SolArch"},
+    }
+    infra_docs = {
+        infra_own: {"_id": infra_own, "code": "INF-OWN", "title": "OwnInfra"},
+        infra_sol: {"_id": infra_sol, "code": "INF-SOL", "title": "SolInfra"},
+    }
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        docs = [arch_docs[i] for i in ids if i in arch_docs]
+        if not docs:
+            docs = [infra_docs[i] for i in ids if i in infra_docs]
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=docs)
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.put(f"/api/apps/{app_id}", json={"solution_id": str(sol_id)})
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["solution"]["title"] == "Fix locks"
+    # Stored labels on the app document are unchanged
+    assert stored["doc"]["architecture_ids"] == [arch_own]
+    assert stored["doc"]["infrastructure_ids"] == [infra_own]
+    set_fields = (
+        mock_db.apps.update_one.await_args.args[1].get("$set", {})
+        if mock_db.apps.update_one.await_args
+        else {}
+    )
+    assert "architecture_ids" not in set_fields
+    assert "infrastructure_ids" not in set_fields
+    # App card still shows only its own labels
+    assert [a["title"] for a in data["architectures"]] == ["OwnArch"]
+    assert [i["title"] for i in data["infrastructures"]] == ["OwnInfra"]
+
+
+def test_solution_effective_labels_union_linked_apps(client, mock_db):
+    """Solution card preview = solution-owned ∪ linked apps' stored labels."""
+    from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_sol = ObjectId("60b8d5a1b55a8b0c848b4568")
+    arch_app = ObjectId("60b8d5a1b55a8b0c848b4578")
+    infra_sol = ObjectId("60b8d5a1b55a8b0c848b4569")
+    infra_app = ObjectId("60b8d5a1b55a8b0c848b4579")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={
+            "_id": sol_id,
+            "code": "SOL-001",
+            "title": "Fix locks",
+            "description": "desc",
+            "problem_id": problem_id,
+            "architecture_ids": [arch_sol],
+            "infrastructure_ids": [infra_sol],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
+    )
+
+    apps_cursor = MagicMock()
+    apps_cursor.to_list = AsyncMock(
+        return_value=[
+            {
+                "_id": app_id,
+                "code": "APP-011",
+                "title": "Standalone Proto",
+                "created_at": datetime.utcnow(),
+                "architecture_ids": [arch_app, arch_sol],  # overlap + new
+                "infrastructure_ids": [infra_app],
+            }
+        ]
+    )
+    mock_db.apps.find = MagicMock(return_value=apps_cursor)
+
+    arch_docs = {
+        arch_sol: {"_id": arch_sol, "code": "ARC-SOL", "title": "SolArch"},
+        arch_app: {"_id": arch_app, "code": "ARC-APP", "title": "AppArch"},
+    }
+    infra_docs = {
+        infra_sol: {"_id": infra_sol, "code": "INF-SOL", "title": "SolInfra"},
+        infra_app: {"_id": infra_app, "code": "INF-APP", "title": "AppInfra"},
+    }
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        docs = [arch_docs[i] for i in ids if i in arch_docs]
+        if not docs:
+            docs = [infra_docs[i] for i in ids if i in infra_docs]
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=docs)
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.get(f"/api/solutions/{sol_id}")
+    assert res.status_code == 200, res.text
+    data = res.json()
+    # Ownership fields stay solution-only (edit form truth)
+    assert [a["title"] for a in data["architectures"]] == ["SolArch"]
+    assert [i["title"] for i in data["infrastructures"]] == ["SolInfra"]
+    # Card preview unions linked app labels (solution first, then app-only)
+    assert [a["title"] for a in data["effective_architectures"]] == [
+        "SolArch",
+        "AppArch",
+    ]
+    assert [i["title"] for i in data["effective_infrastructures"]] == [
+        "SolInfra",
+        "AppInfra",
+    ]
+
+
+def test_unlink_app_materializes_solution_labels(client, mock_db):
+    """Unlinking copies solution concepts onto the app when own labels are empty."""
+    from datetime import datetime
+
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
+    arch_sol = ObjectId("60b8d5a1b55a8b0c848b4568")
+    infra_sol = ObjectId("60b8d5a1b55a8b0c848b4569")
+    app_id = ObjectId("60b8d5a1b55a8b0c848b4580")
+    problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
+
+    existing = {
+        "_id": app_id,
+        "title": "Linked Proto",
+        "code": "APP-010",
+        "description": "desc",
+        "github_url": "https://github.com/owner/repo",
+        "live_url": None,
+        "solution_id": sol_id,
+        "architecture_ids": [],
+        "infrastructure_ids": [],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+    solution = {
+        "_id": sol_id,
+        "code": "SOL-001",
+        "title": "Fix locks",
+        "problem_id": problem_id,
+        "architecture_ids": [arch_sol],
+        "infrastructure_ids": [infra_sol],
+    }
+
+    stored = {"doc": dict(existing)}
+
+    async def find_app(query):
+        return dict(stored["doc"])
+
+    async def update_app_doc(query, update):
+        stored["doc"].update(update.get("$set", {}))
+        return type("R", (object,), {"modified_count": 1})()
+
+    mock_db.apps.find_one = AsyncMock(side_effect=find_app)
+    mock_db.apps.update_one = AsyncMock(side_effect=update_app_doc)
+    mock_db.solutions.find_one = AsyncMock(return_value=solution)
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": problem_id, "code": "PBM-001", "title": "DB Lock"}
+    )
+    mock_db.architectures.find_one = AsyncMock(
+        return_value={"_id": arch_sol, "code": "ARC-001", "title": "Instructor"}
+    )
+    mock_db.infrastructures.find_one = AsyncMock(
+        return_value={"_id": infra_sol, "code": "INF-001", "title": "LangChain"}
+    )
+
+    arch_cursor = MagicMock()
+    arch_cursor.to_list = AsyncMock(
+        return_value=[{"_id": arch_sol, "code": "ARC-001", "title": "Instructor"}]
+    )
+    infra_cursor = MagicMock()
+    infra_cursor.to_list = AsyncMock(
+        return_value=[{"_id": infra_sol, "code": "INF-001", "title": "LangChain"}]
+    )
+
+    def find_side_effect(query):
+        ids = (
+            query.get("_id", {}).get("$in", [])
+            if isinstance(query.get("_id"), dict)
+            else []
+        )
+        if arch_sol in ids:
+            return arch_cursor
+        if infra_sol in ids:
+            return infra_cursor
+        c = MagicMock()
+        c.to_list = AsyncMock(return_value=[])
+        return c
+
+    mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
+    mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
+
+    res = client.put(f"/api/apps/{app_id}", json={"solution_id": ""})
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["solution"] is None
+    assert len(data["architectures"]) == 1
+    assert data["architectures"][0]["title"] == "Instructor"
+    assert len(data["infrastructures"]) == 1
+    assert data["infrastructures"][0]["title"] == "LangChain"
+    assert stored["doc"]["solution_id"] is None
+    assert stored["doc"]["architecture_ids"] == [arch_sol]
+    assert stored["doc"]["infrastructure_ids"] == [infra_sol]
 
 
 def test_delete_architecture_pulls_from_apps(client, mock_db):

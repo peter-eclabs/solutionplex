@@ -63,8 +63,12 @@ export interface Solution {
   title: string;
   description: string;
   problem: ProblemShort | null;
+  /** Solution-owned labels (edit forms). */
   architectures: ArchitectureShort[];
   infrastructures: InfrastructureShort[];
+  /** Card preview: solution-owned ∪ linked apps' labels (display only). */
+  effective_architectures?: ArchitectureShort[];
+  effective_infrastructures?: InfrastructureShort[];
   apps: AppShort[];
   created_at: string;
   updated_at: string;
