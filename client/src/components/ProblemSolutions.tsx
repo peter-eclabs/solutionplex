@@ -194,7 +194,7 @@ export function ProblemSolutions({
                 </div>
 
                 <div className="form-field">
-                  <label>Architecture Designs (1:N)</label>
+                  <label>Architecture Designs (required)</label>
                   <MultiSelect
                     id="psol-arch"
                     options={architectures.map((arch) => ({ value: arch.id, label: arch.title }))}
@@ -206,7 +206,7 @@ export function ProblemSolutions({
                 </div>
 
                 <div className="form-field">
-                  <label>Infrastructure Stacks (1:N)</label>
+                  <label>Infrastructure Stacks (required)</label>
                   <MultiSelect
                     id="psol-infra"
                     options={infrastructures.map((infra) => ({ value: infra.id, label: infra.title }))}
