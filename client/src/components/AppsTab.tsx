@@ -4,6 +4,8 @@ import { api } from '../api/client';
 import type { AppPrototype } from '../api/client';
 import { CreateAppModal } from './CreateAppModal';
 import { DeleteButton } from './DeleteButton';
+import { LabelPreview } from './LabelPreview';
+import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
 interface AppsTabProps {
@@ -14,9 +16,6 @@ interface AppsTabProps {
 export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  const previewDescription = (text: string, max = 140): string =>
-    text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 
   const { data: apps = [], isLoading: loading, error: queryError } = useQuery<AppPrototype[]>({
     queryKey: ['apps', searchQuery],
@@ -79,9 +78,11 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                   {app.code && <span className="entity-code">{app.code}</span>}
                   <h4>{app.title}</h4>
                 </div>
-                <div className="card-desc card-desc-preview">
-                  {previewDescription(app.description)}
-                </div>
+                <p className="card-created-on">{formatCreatedOn(app.created_at)}</p>
+                <LabelPreview
+                  architectures={app.architectures ?? []}
+                  infrastructures={app.infrastructures ?? []}
+                />
               </article>
             ))}
           </div>
