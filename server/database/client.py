@@ -18,6 +18,17 @@ architectures_col = db["architectures"]
 infrastructures_col = db["infrastructures"]
 apps_col = db["apps"]
 counters_col = db["counters"]
+users_col = db["users"]
+
+
+async def ensure_indexes() -> None:
+    """Create required MongoDB indexes at application startup.
+
+    Returns:
+        None.
+    """
+    await users_col.create_index("email", unique=True)
+    logger.info("MongoDB indexes ensured")
 
 
 async def next_code(prefix: str) -> str:

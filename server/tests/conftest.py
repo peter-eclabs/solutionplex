@@ -15,6 +15,7 @@ def mock_db(monkeypatch):
     mock_db.infrastructures = AsyncMock()
     mock_db.apps = AsyncMock()
     mock_db.counters = AsyncMock()
+    mock_db.users = AsyncMock()
 
     # Configure find method to return a synchronous mock cursor (which has async to_list)
     for col in [
@@ -23,6 +24,7 @@ def mock_db(monkeypatch):
         mock_db.architectures,
         mock_db.infrastructures,
         mock_db.apps,
+        mock_db.users,
     ]:
         cursor = MagicMock()
         cursor.to_list = AsyncMock(return_value=[])
@@ -51,12 +53,22 @@ def mock_db(monkeypatch):
     )
     monkeypatch.setattr("server.database.client.apps_col", mock_db.apps)
     monkeypatch.setattr("server.database.client.counters_col", mock_db.counters)
+    monkeypatch.setattr("server.database.client.users_col", mock_db.users)
+
+    # Lifespan calls ensure_indexes on startup — avoid real MongoDB.
+    mock_ensure = AsyncMock(return_value=None)
+    monkeypatch.setattr("server.database.client.ensure_indexes", mock_ensure)
 
     return mock_db
 
 
 @pytest.fixture
-def client():
+def client(mock_db, monkeypatch):
     from server.main import app
+    import server.main as main_mod
 
-    return TestClient(app)
+    # Re-bind after import so lifespan never hits real MongoDB.
+    monkeypatch.setattr(main_mod, "ensure_indexes", AsyncMock(return_value=None))
+
+    with TestClient(app) as test_client:
+        yield test_client

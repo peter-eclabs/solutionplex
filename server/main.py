@@ -1,5 +1,7 @@
 import logging
 import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -7,9 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from server.database.client import ensure_indexes
 from server.routers import (
     apps,
     architectures,
+    auth,
     infrastructures,
     problems,
     search,
@@ -20,10 +24,26 @@ from server.routers import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan: ensure MongoDB indexes on startup.
+
+    Args:
+        app: The FastAPI application instance.
+
+    Yields:
+        Control to the running application.
+    """
+    await ensure_indexes()
+    yield
+
+
 app = FastAPI(
     title="Solutionplex API",
     description="Internal knowledge base matching problems to architectures, infrastructures, and solutions",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration for client port
@@ -36,6 +56,7 @@ app.add_middleware(
 )
 
 # Include modular routers
+app.include_router(auth.router)
 app.include_router(problems.router)
 app.include_router(architectures.router)
 app.include_router(infrastructures.router)
