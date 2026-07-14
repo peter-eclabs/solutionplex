@@ -40,6 +40,7 @@ async def create_infrastructure(data: InfrastructureCreate):
 @router.get(
     "/",
     response_model=List[InfrastructureResponse],
+    dependencies=[Depends(require_role(Role.READER))],
     summary="List all Infrastructure stacks",
     description="Retrieves a list of all Infrastructure stack cards, optionally filtered by keyword.",
 )
@@ -59,6 +60,7 @@ async def list_infrastructures(q: Optional[str] = None):
 @router.get(
     "/{id}",
     response_model=InfrastructureResponse,
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Get Infrastructure details",
     description="Retrieves details of a specific Infrastructure stack card.",
 )

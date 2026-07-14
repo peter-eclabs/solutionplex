@@ -40,6 +40,7 @@ async def create_solution(data: SolutionCreate):
 @router.get(
     "/",
     response_model=List[SolutionResponse],
+    dependencies=[Depends(require_role(Role.READER))],
     summary="List all Solutions",
     description="Retrieves a list of all Solution cards, optionally filtered by keyword.",
 )
@@ -59,6 +60,7 @@ async def list_solutions(q: Optional[str] = None):
 @router.get(
     "/{id}",
     response_model=SolutionResponse,
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Get Solution details",
     description="Retrieves details of a specific Solution card, fully populating references.",
 )

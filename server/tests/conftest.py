@@ -85,3 +85,16 @@ def admin_headers():
         role="admin",
     )
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def reader_headers():
+    """Authorization headers for a Reader JWT (read-route tests)."""
+    from server.security.jwt import create_access_token
+
+    token = create_access_token(
+        subject="test-reader-id",
+        email="reader@example.com",
+        role="reader",
+    )
+    return {"Authorization": f"Bearer {token}"}

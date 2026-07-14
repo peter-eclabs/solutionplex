@@ -88,7 +88,7 @@ def test_create_solution_invalid_infrastructure(client, mock_db, admin_headers):
     assert "Associated Infrastructure not found" in res.json()["detail"]
 
 
-def test_search_scoped_by_tab(client, mock_db):
+def test_search_scoped_by_tab(client, mock_db, reader_headers):
     mock_problems_cursor = AsyncMock()
     mock_problems_cursor.to_list = AsyncMock(
         return_value=[
@@ -108,7 +108,7 @@ def test_search_scoped_by_tab(client, mock_db):
     mock_solutions_cursor.to_list = AsyncMock(return_value=[])
     mock_db.solutions.find.return_value = mock_solutions_cursor
 
-    res = client.get("/api/search/?q=DB&tab=problems")
+    res = client.get("/api/search/?q=DB&tab=problems", headers=reader_headers)
     assert res.status_code == 200
     results = res.json()
     assert len(results) == 1
@@ -188,7 +188,7 @@ def test_create_solution_success(client, mock_db, admin_headers):
     assert data["infrastructures"][0]["title"] == "AWS"
 
 
-def test_fetch_readme_success(client, monkeypatch):
+def test_fetch_readme_success(client, monkeypatch, reader_headers):
     import base64
     import httpx
 
@@ -204,13 +204,14 @@ def test_fetch_readme_success(client, monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
     res = client.get(
-        "/api/apps/readme?github_url=https://github.com/owner/repo"
+        "/api/apps/readme?github_url=https://github.com/owner/repo",
+        headers=reader_headers,
     )
     assert res.status_code == 200
     assert res.json() == {"readme_content": "Hello World"}
 
 
-def test_fetch_readme_api_error(client, monkeypatch):
+def test_fetch_readme_api_error(client, monkeypatch, reader_headers):
     import httpx
 
     class MockResponse:
@@ -223,7 +224,8 @@ def test_fetch_readme_api_error(client, monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
     res = client.get(
-        "/api/apps/readme?github_url=https://github.com/owner/repo"
+        "/api/apps/readme?github_url=https://github.com/owner/repo",
+        headers=reader_headers,
     )
     assert res.status_code == 400
     assert "Failed to fetch README from GitHub API" in res.json()["detail"]
@@ -342,7 +344,7 @@ def test_create_app_invalid_solution(client, mock_db, admin_headers):
     assert "Associated Solution not found" in res.json()["detail"]
 
 
-def test_list_apps_success(client, mock_db):
+def test_list_apps_success(client, mock_db, reader_headers):
     from datetime import datetime
     mock_apps_cursor = AsyncMock()
     mock_apps_cursor.to_list = AsyncMock(
@@ -367,7 +369,7 @@ def test_list_apps_success(client, mock_db):
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
 
-    res = client.get("/api/apps/")
+    res = client.get("/api/apps/", headers=reader_headers)
     assert res.status_code == 200
     data = res.json()
     assert len(data) == 1
@@ -376,7 +378,7 @@ def test_list_apps_success(client, mock_db):
     assert data[0]["problem"]["title"] == "DB Lock"
 
 
-def test_get_app_success(client, mock_db):
+def test_get_app_success(client, mock_db, reader_headers):
     from datetime import datetime
     mock_db.apps.find_one = AsyncMock(
         return_value={
@@ -397,7 +399,7 @@ def test_get_app_success(client, mock_db):
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
 
-    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580")
+    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580", headers=reader_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["title"] == "Cache Monitor Admin"
@@ -406,14 +408,14 @@ def test_get_app_success(client, mock_db):
     assert data["problem"]["title"] == "DB Lock"
 
 
-def test_get_app_not_found(client, mock_db):
+def test_get_app_not_found(client, mock_db, reader_headers):
     mock_db.apps.find_one = AsyncMock(return_value=None)
-    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580")
+    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4580", headers=reader_headers)
     assert res.status_code == 404
     assert res.json()["detail"] == "App not found"
 
 
-def test_problem_solution_app_relationship(client, mock_db):
+def test_problem_solution_app_relationship(client, mock_db, reader_headers):
     from datetime import datetime
     problem_id = ObjectId("60b8d5a1b55a8b0c848b4567")
     solution_id = ObjectId("60b8d5a1b55a8b0c848b4570")
@@ -454,7 +456,7 @@ def test_problem_solution_app_relationship(client, mock_db):
     )
 
     # Call get_solution api endpoint
-    res_sol = client.get(f"/api/solutions/{solution_id}")
+    res_sol = client.get(f"/api/solutions/{solution_id}", headers=reader_headers)
     assert res_sol.status_code == 200
     data_sol = res_sol.json()
     assert data_sol["apps"][0]["id"] == str(app_id)
@@ -480,7 +482,7 @@ def test_problem_solution_app_relationship(client, mock_db):
     )
 
     # Call get_app api endpoint
-    res_app = client.get(f"/api/apps/{app_id}")
+    res_app = client.get(f"/api/apps/{app_id}", headers=reader_headers)
     assert res_app.status_code == 200
     data_app = res_app.json()
     assert data_app["solution"]["id"] == str(solution_id)
@@ -574,7 +576,7 @@ def test_create_app_with_own_labels_no_solution(client, mock_db, admin_headers):
     assert inserted["doc"]["solution_id"] is None
 
 
-def test_linked_app_card_shows_only_own_labels(client, mock_db):
+def test_linked_app_card_shows_only_own_labels(client, mock_db, reader_headers):
     """Linked app cards keep showing only the app's stored labels."""
     from datetime import datetime
 
@@ -638,7 +640,7 @@ def test_linked_app_card_shows_only_own_labels(client, mock_db):
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
     mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
-    res = client.get(f"/api/apps/{app_id}")
+    res = client.get(f"/api/apps/{app_id}", headers=reader_headers)
     assert res.status_code == 200
     data = res.json()
     # App card never inherits solution labels
@@ -646,7 +648,7 @@ def test_linked_app_card_shows_only_own_labels(client, mock_db):
     assert data["infrastructures"] == []
 
 
-def test_app_uses_own_labels_when_unlinked(client, mock_db):
+def test_app_uses_own_labels_when_unlinked(client, mock_db, reader_headers):
     from datetime import datetime
 
     arch_own = ObjectId("60b8d5a1b55a8b0c848b4578")
@@ -695,7 +697,7 @@ def test_app_uses_own_labels_when_unlinked(client, mock_db):
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
     mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
-    res = client.get(f"/api/apps/{app_id}")
+    res = client.get(f"/api/apps/{app_id}", headers=reader_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["architectures"][0]["title"] == "OwnArch"
@@ -798,7 +800,7 @@ def test_link_app_leaves_app_labels_unchanged(client, mock_db, admin_headers):
     assert [i["title"] for i in data["infrastructures"]] == ["OwnInfra"]
 
 
-def test_solution_effective_labels_union_linked_apps(client, mock_db):
+def test_solution_effective_labels_union_linked_apps(client, mock_db, reader_headers):
     """Solution card preview = solution-owned ∪ linked apps' stored labels."""
     from datetime import datetime
 
@@ -867,7 +869,7 @@ def test_solution_effective_labels_union_linked_apps(client, mock_db):
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
     mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
-    res = client.get(f"/api/solutions/{sol_id}")
+    res = client.get(f"/api/solutions/{sol_id}", headers=reader_headers)
     assert res.status_code == 200, res.text
     data = res.json()
     # Ownership fields stay solution-only (edit form truth)

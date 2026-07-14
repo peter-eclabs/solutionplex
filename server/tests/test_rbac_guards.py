@@ -1,10 +1,9 @@
 """Tests for RBAC route guards across all entity routers.
 
 Validates:
-- Unauthenticated mutation requests → 401
-- Reader role → 403 on mutations
+- Unauthenticated mutation/read requests → 401
+- Reader role → 403 on mutations, 2xx on GET
 - Admin / SuperAdmin → passes guard (status not 401/403)
-- GET list routes remain open without auth
 """
 
 from typing import Any, Optional
@@ -82,10 +81,17 @@ MUTATION_ROUTES = [
 
 READ_ROUTES = [
     ("GET", "/api/problems/"),
+    ("GET", "/api/problems/000000000000000000000001"),
     ("GET", "/api/solutions/"),
+    ("GET", "/api/solutions/000000000000000000000001"),
     ("GET", "/api/architectures/"),
+    ("GET", "/api/architectures/000000000000000000000001"),
     ("GET", "/api/infrastructures/"),
+    ("GET", "/api/infrastructures/000000000000000000000001"),
     ("GET", "/api/apps/"),
+    ("GET", "/api/apps/000000000000000000000001"),
+    ("GET", "/api/apps/readme?github_url=https://github.com/x/y"),
+    ("GET", "/api/search/?q=test&tab=problems"),
 ]
 
 
@@ -110,13 +116,20 @@ def lenient_client(mock_db, monkeypatch):
 
 
 class TestUnauthenticated:
-    """Unauthenticated requests to protected mutation routes must get 401."""
+    """Unauthenticated requests to protected routes must get 401."""
 
     @pytest.mark.parametrize("method,path,body", MUTATION_ROUTES)
     def test_mutation_returns_401(
         self, client: TestClient, method: str, path: str, body: Optional[dict]
     ):
         resp = _request(client, method, path, body)
+        assert resp.status_code == 401, (
+            f"{method} {path} expected 401, got {resp.status_code}: {resp.text}"
+        )
+
+    @pytest.mark.parametrize("method,path", READ_ROUTES)
+    def test_get_returns_401(self, client: TestClient, method: str, path: str):
+        resp = client.get(path)
         assert resp.status_code == 401, (
             f"{method} {path} expected 401, got {resp.status_code}: {resp.text}"
         )
@@ -348,17 +361,47 @@ class TestAdminPostWithServiceStub:
         assert resp.status_code in (200, 201), resp.text
 
 
-# ── GET routes remain open ───────────────────────────────────────
+# ── GET routes require Reader ────────────────────────────────────
 
 
-class TestReadRoutesOpen:
-    """GET (list) routes must not return 401 or 403, even without auth."""
+class TestReadRoutesRequireAuth:
+    """GET routes require authentication; Reader (or above) may access."""
 
     @pytest.mark.parametrize("method,path", READ_ROUTES)
-    def test_get_not_auth_error(self, client: TestClient, method: str, path: str):
-        resp = client.get(path)
+    def test_reader_get_not_auth_error(
+        self, lenient_client: TestClient, method: str, path: str
+    ):
+        resp = lenient_client.get(path, headers=_auth_headers("reader"))
         assert resp.status_code not in (401, 403), (
-            f"GET {path} should be open but got {resp.status_code}"
+            f"GET {path} reader should pass guard but got {resp.status_code}: "
+            f"{resp.text}"
+        )
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/api/problems/",
+            "/api/solutions/",
+            "/api/architectures/",
+            "/api/infrastructures/",
+            "/api/apps/",
+            "/api/search/?q=test&tab=problems",
+        ],
+    )
+    def test_reader_list_returns_2xx(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, path: str
+    ):
+        from unittest.mock import AsyncMock
+
+        # List handlers return empty lists from mock DB by default.
+        if path.startswith("/api/search"):
+            monkeypatch.setattr(
+                "server.routers.search.problems.list_problems",
+                AsyncMock(return_value=[]),
+            )
+        resp = client.get(path, headers=_auth_headers("reader"))
+        assert 200 <= resp.status_code < 300, (
+            f"GET {path} expected 2xx for reader, got {resp.status_code}: {resp.text}"
         )
 
 

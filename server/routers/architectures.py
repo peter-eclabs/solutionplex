@@ -40,6 +40,7 @@ async def create_architecture(data: ArchitectureCreate):
 @router.get(
     "/",
     response_model=List[ArchitectureResponse],
+    dependencies=[Depends(require_role(Role.READER))],
     summary="List all Architecture patterns",
     description="Retrieves a list of all Architecture pattern cards, optionally filtered by keyword.",
 )
@@ -59,6 +60,7 @@ async def list_architectures(q: Optional[str] = None):
 @router.get(
     "/{id}",
     response_model=ArchitectureResponse,
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Get Architecture details",
     description="Retrieves details of a specific Architecture pattern card.",
 )

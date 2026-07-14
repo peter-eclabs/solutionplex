@@ -1,15 +1,17 @@
 import logging
 from typing import Any, List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from server.schemas.models import (
     AppResponse,
     ArchitectureResponse,
     InfrastructureResponse,
     ProblemResponse,
+    Role,
     SolutionResponse,
 )
+from server.security.deps import require_role
 from server.services import (
     apps,
     architectures,
@@ -24,6 +26,7 @@ router = APIRouter(prefix="/api/search", tags=["Search"])
 
 @router.get(
     "/",
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Scoped keyword search mapped to active client tabs",
     description="Performs keyword search on title and description, scoped to a single active client tab.",
 )

@@ -40,6 +40,7 @@ async def create_app(data: AppCreate):
 @router.get(
     "/",
     response_model=List[AppResponse],
+    dependencies=[Depends(require_role(Role.READER))],
     summary="List all Apps",
     description="Retrieves a list of all App cards, optionally filtered by keyword.",
 )
@@ -58,6 +59,7 @@ async def list_apps(q: Optional[str] = None):
 
 @router.get(
     "/readme",
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Fetch README markdown content for a given GitHub repository URL",
     description="Retrieves, decodes, and returns the README file content from the specified repository.",
 )
@@ -82,6 +84,7 @@ async def fetch_readme(github_url: str):
 @router.get(
     "/{id}",
     response_model=AppResponse,
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Get App details",
     description="Retrieves detail view for a specific App card.",
 )

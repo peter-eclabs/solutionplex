@@ -36,6 +36,7 @@ async def create_problem(data: ProblemCreate):
 @router.get(
     "/",
     response_model=List[ProblemResponse],
+    dependencies=[Depends(require_role(Role.READER))],
     summary="List all Problems",
     description="Retrieves a list of all Problem cards, optionally filtered by keyword.",
 )
@@ -55,6 +56,7 @@ async def list_problems(q: Optional[str] = None):
 @router.get(
     "/{id}",
     response_model=ProblemResponse,
+    dependencies=[Depends(require_role(Role.READER))],
     summary="Get Problem details",
     description="Retrieves detail view for a specific Problem card.",
 )
