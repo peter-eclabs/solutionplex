@@ -60,7 +60,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
 
   // Global lookups for editing dropdowns
   const [allProblems, setAllProblems] = useState<Problem[]>([]);
-  const [allSolutions, setAllSolutions] = useState<Solution[]>([]);
+  const [, setAllSolutions] = useState<Solution[]>([]);
   const [allArchs, setAllArchs] = useState<Architecture[]>([]);
   const [allInfras, setAllInfras] = useState<Infrastructure[]>([]);
 
