@@ -8,6 +8,8 @@ import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
 import { Can } from '../auth/Can';
 import { useRole } from '../auth/AuthContext';
+import { HiddenToggle } from './HiddenToggle';
+import { HiddenBadge } from './HiddenBadge';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
@@ -22,6 +24,7 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
   const { canWrite } = useRole();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [hidden, setHidden] = useState(false);
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -39,7 +42,7 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
   });
 
   const createMutation = useMutation({
-    mutationFn: (input: { title: string; description: string }) => api.createProblem(input),
+    mutationFn: (input: { title: string; description: string; hidden?: boolean }) => api.createProblem(input),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,9 +51,10 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
       return;
     }
     try {
-      await createMutation.mutateAsync({ title: title.trim(), description: description.trim() });
+      await createMutation.mutateAsync({ title: title.trim(), description: description.trim(), hidden });
       setTitle('');
       setDescription('');
+      setHidden(false);
       setIsFormOpen(false);
       setError('');
       queryClient.invalidateQueries({ queryKey: ['problems'] });
@@ -104,6 +108,7 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
                     rows={4}
                   />
                 </div>
+                <HiddenToggle checked={hidden} onChange={setHidden} />
                 <button type="submit" className="submit-btn" disabled={!title.trim() || !description.trim()}>
                   Create Problem Card
                 </button>
@@ -163,6 +168,7 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
                 <div className="card-header">
                   {p.code && <span className="entity-code">{p.code}</span>}
                   <CardTitle title={p.title} />
+                  {p.hidden && <HiddenBadge />}
                 </div>
                 <p className="card-created-on">{formatCreatedOn(p.created_at)}</p>
                 {p.solutions.length > 0 ? (

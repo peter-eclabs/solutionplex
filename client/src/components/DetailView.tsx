@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
+import { ApiError } from '../api/client';
 import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { CharCounter } from './CharCounter';
@@ -10,6 +11,8 @@ import { CustomSelect } from './CustomSelect';
 import { MultiSelect } from './MultiSelect';
 import { ProblemSolutions } from './ProblemSolutions';
 import { SolutionPrototypes } from './SolutionPrototypes';
+import { HiddenToggle } from './HiddenToggle';
+import { HiddenBadge } from './HiddenBadge';
 import { invalidatePlexCaches } from '../api/queryKeys';
 import { useRole } from '../auth/AuthContext';
 import { Can } from '../auth/Can';
@@ -52,6 +55,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   // Editing states (common)
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editHidden, setEditHidden] = useState(false);
 
   // Editing states (specialized)
   const [editProblemId, setEditProblemId] = useState('');
@@ -155,6 +159,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       setProblemData(data.problemData);
       setEditTitle(data.problemData.title);
       setEditDescription(data.problemData.description);
+      setEditHidden(data.problemData.hidden ?? false);
       setRelatedApps(data.relatedApps);
       setProblemSolutions(data.problemSolutions);
     } else if (data.kind === 'solutions') {
@@ -194,10 +199,21 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     setAllSolutions(lookups.allSolutions);
   }, [lookups]);
 
+  // Readers hitting a hidden card's URL directly get the Access Denied dialog.
+  useEffect(() => {
+    if (queryError instanceof ApiError && queryError.status === 403 && !isEditing) {
+      onNavigate('/unauthorized');
+    }
+  }, [queryError, isEditing, onNavigate]);
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (component === 'problems') {
-        return api.updateProblem(id, { title: editTitle.trim(), description: editDescription.trim() });
+        return api.updateProblem(id, {
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          hidden: editHidden,
+        });
       } else if (component === 'solutions') {
         return api.updateSolution(id, {
           title: editTitle.trim(),
@@ -442,6 +458,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                 />
               </div>
 
+              {component === 'problems' && canWrite && (
+                <HiddenToggle checked={editHidden} onChange={setEditHidden} />
+              )}
+
               {/* Special relationship inputs for Solutions */}
               {component === 'solutions' && (
                 <>
@@ -547,6 +567,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   {component.slice(0, -1).toUpperCase()}
                 </div>
                 <h2>{getEntityTitle()}</h2>
+                {component === 'problems' && problemData?.hidden && <HiddenBadge />}
+                {component === 'solutions' && solutionData?.hidden && <HiddenBadge />}
+                {component === 'apps' && appData?.hidden && <HiddenBadge />}
                 <Can action="write">
                   <button onClick={() => setIsEditing(true)} className="edit-trigger-btn">
                     Edit Card

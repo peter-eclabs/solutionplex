@@ -10,6 +10,7 @@ import { formatCreatedOn } from './formatCreatedOn';
 import { invalidatePlexCaches } from '../api/queryKeys';
 import { Can } from '../auth/Can';
 import { useRole } from '../auth/AuthContext';
+import { HiddenBadge } from './HiddenBadge';
 import './TabStyles.css';
 
 interface AppsTabProps {
@@ -96,6 +97,7 @@ export function AppsTab({ searchQuery, onCardClick, onWriteDenied }: AppsTabProp
                 <div className="card-header">
                   {app.code && <span className="entity-code">{app.code}</span>}
                   <CardTitle title={app.title} />
+                  {app.hidden && <HiddenBadge />}
                 </div>
                 <p className="card-created-on">{formatCreatedOn(app.created_at)}</p>
                 <LabelPreview

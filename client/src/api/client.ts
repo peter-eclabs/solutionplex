@@ -29,6 +29,7 @@ export interface AppShort {
   id: string;
   code?: string | null;
   title: string;
+  hidden?: boolean | null;
   created_at?: string;
 }
 
@@ -37,6 +38,7 @@ export interface Problem {
   code?: string | null;
   title: string;
   description: string;
+  hidden?: boolean;
   solutions: SolutionShort[];
   created_at: string;
   updated_at: string;
@@ -75,6 +77,7 @@ export interface Solution {
   apps: AppShort[];
   created_at: string;
   updated_at: string;
+  hidden?: boolean;
 }
 
 export interface AppPrototype {
@@ -91,9 +94,19 @@ export interface AppPrototype {
   infrastructures: InfrastructureShort[];
   created_at: string;
   updated_at: string;
+  hidden?: boolean;
 }
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
 
 export interface TokenResponse {
   access_token: string;
@@ -122,16 +135,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers,
   });
 
-  if (response.status === 401) {
-    // Token expired or invalid — clear and reload to show login
-    localStorage.removeItem(TOKEN_KEY);
-    window.location.reload();
-    throw new Error('Session expired');
-  }
-
   if (!response.ok) {
     const errorMsg = await response.text();
-    throw new Error(errorMsg || `API request failed with status ${response.status}`);
+    if (response.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      window.location.reload();
+      throw new ApiError(401, 'Session expired');
+    }
+    throw new ApiError(
+      response.status,
+      errorMsg || `API request failed with status ${response.status}`,
+    );
   }
   try {
     const data: T = await response.json();
@@ -145,9 +159,9 @@ export const api = {
   // Problem endpoints
   getProblems: (q?: string) => request<Problem[]>(`/api/problems/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getProblem: (id: string) => request<Problem>(`/api/problems/${id}`),
-  createProblem: (data: { title: string; description: string }) =>
+  createProblem: (data: { title: string; description: string; hidden?: boolean }) =>
     request<Problem>('/api/problems/', { method: 'POST', body: JSON.stringify(data) }),
-  updateProblem: (id: string, data: { title?: string; description?: string }) =>
+  updateProblem: (id: string, data: { title?: string; description?: string; hidden?: boolean }) =>
     request<Problem>(`/api/problems/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteProblem: (id: string) =>
     request<{ detail: string }>(`/api/problems/${id}`, { method: 'DELETE' }),

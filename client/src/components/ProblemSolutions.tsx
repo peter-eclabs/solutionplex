@@ -8,6 +8,7 @@ import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
 import { Can } from '../auth/Can';
 import { useRole } from '../auth/AuthContext';
+import { HiddenBadge } from './HiddenBadge';
 import './TabStyles.css';
 
 interface ProblemSolutionsProps {
@@ -137,6 +138,7 @@ export function ProblemSolutions({
                 onClick={() => onNavigate(`/solutions/${s.id}`)}
               >
                 <span className="problem-solution-title">{s.title}</span>
+                {s.hidden && <HiddenBadge />}
                 <span className="problem-solution-created">
                   {formatCreatedOn(s.created_at)}
                 </span>
