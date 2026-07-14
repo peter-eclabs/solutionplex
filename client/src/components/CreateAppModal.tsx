@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import type { Solution, Architecture, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
 import { CharCounter } from './CharCounter';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface CreateAppModalProps {
@@ -25,6 +26,7 @@ export function CreateAppModal({
   solutionTitle,
   heading = 'Register Prototype',
 }: CreateAppModalProps) {
+  const { canWrite } = useRole();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
@@ -109,7 +111,7 @@ export function CreateAppModal({
     setIsDropdownOpen(true);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !canWrite) return null;
 
   // Creating from a solution detail: always link to that solution; no propose/arch UI.
   const prelinkedToSolution = !!solutionId;

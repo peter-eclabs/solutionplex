@@ -6,6 +6,8 @@ import { DeleteButton } from './DeleteButton';
 import { LabelPreview } from './LabelPreview';
 import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
+import { Can } from '../auth/Can';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface ProblemSolutionsProps {
@@ -23,6 +25,7 @@ export function ProblemSolutions({
   onChanged,
   onNavigate,
 }: ProblemSolutionsProps) {
+  const { canWrite } = useRole();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedArchIds, setSelectedArchIds] = useState<string[]>([]);
@@ -104,13 +107,15 @@ export function ProblemSolutions({
         <span className="problem-solutions-label">
           Solutions ({solutions.length})
         </span>
-        <button
-          type="button"
-          className="propose-solution-btn"
-          onClick={openForm}
-        >
-          + Propose Solution
-        </button>
+        <Can action="write">
+          <button
+            type="button"
+            className="propose-solution-btn"
+            onClick={openForm}
+          >
+            + Propose Solution
+          </button>
+        </Can>
       </div>
 
       {solutions.length === 0 ? (
@@ -151,7 +156,7 @@ export function ProblemSolutions({
         </ul>
       )}
 
-      {isFormOpen && (
+      {canWrite && isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <aside className="creation-panel">

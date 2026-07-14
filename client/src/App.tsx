@@ -6,9 +6,12 @@ import { ArchitectureTab } from './components/ArchitectureTab';
 import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
 import { DetailView } from './components/DetailView';
+import { UnauthorizedView } from './components/UnauthorizedView';
 import { ToastProvider } from './components/ToastContext';
 import { LoginView } from './components/LoginView';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider, useAuth, useRole } from './auth/AuthContext';
+import { hasMinRole } from './auth/guards';
+import type { UserRole } from './auth/jwt';
 
 export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
 
@@ -43,6 +46,7 @@ export function App() {
 
 function AppContent() {
   const { user, isLoading, logout } = useAuth();
+  const { role } = useRole();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('problems');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,11 +66,32 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigate = (to: string) => {
+  const navigate = useCallback((to: string) => {
     const fromPath = window.location.pathname;
     window.history.pushState({ fromApp: true, fromPath }, '', to);
     setCurrentPath(to);
-  };
+  }, []);
+
+  /**
+   * Navigate only when the current role meets `minRole`.
+   * Insufficient clearance redirects to /unauthorized.
+   */
+  const navigateGuarded = useCallback(
+    (to: string, minRole: UserRole = 'admin') => {
+      if (!hasMinRole(role, minRole)) {
+        navigate('/unauthorized');
+        return false;
+      }
+      navigate(to);
+      return true;
+    },
+    [navigate, role]
+  );
+
+  /** Defense-in-depth for mutation UI: send readers to the unauthorized page. */
+  const handleWriteDenied = useCallback(() => {
+    navigateGuarded(currentPath, 'admin');
+  }, [navigateGuarded, currentPath]);
 
   const tabs: TabInfo[] = [
     { id: 'problems', label: 'Problems' },
@@ -81,7 +106,8 @@ function AppContent() {
     navigate('/');
   };
 
-  const routeInfo = parseRoute(currentPath);
+  const isUnauthorized = currentPath === '/unauthorized';
+  const routeInfo = isUnauthorized ? null : parseRoute(currentPath);
 
   // Sync active tab with parsed route component so when user returns, they land on correct tab
   useEffect(() => {
@@ -108,7 +134,7 @@ function AppContent() {
             <span className="badge">MVP</span>
           </div>
 
-          {!routeInfo && (
+          {!routeInfo && !isUnauthorized && (
             <div className="search-group">
               <input
                 type="text"
@@ -129,7 +155,7 @@ function AppContent() {
           </div>
         </header>
 
-        {!routeInfo && (
+        {!routeInfo && !isUnauthorized && (
           <nav className="tab-navigation">
             {tabs.map((tab) => (
               <button
@@ -144,7 +170,9 @@ function AppContent() {
         )}
 
         <main className="main-content">
-          {routeInfo ? (
+          {isUnauthorized ? (
+            <UnauthorizedView onNavigate={navigate} />
+          ) : routeInfo ? (
             <DetailView
               component={routeInfo.component}
               id={routeInfo.id}
@@ -157,6 +185,7 @@ function AppContent() {
                   <ProblemsTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/problems/${id}`)}
+                    onWriteDenied={handleWriteDenied}
                   />
                 </div>
               )}
@@ -165,6 +194,7 @@ function AppContent() {
                   <ArchitectureTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/architecture/${id}`)}
+                    onWriteDenied={handleWriteDenied}
                   />
                 </div>
               )}
@@ -173,6 +203,7 @@ function AppContent() {
                   <InfrastructureTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/infrastructure/${id}`)}
+                    onWriteDenied={handleWriteDenied}
                   />
                 </div>
               )}
@@ -181,6 +212,7 @@ function AppContent() {
                   <AppsTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/apps/${id}`)}
+                    onWriteDenied={handleWriteDenied}
                   />
                 </div>
               )}

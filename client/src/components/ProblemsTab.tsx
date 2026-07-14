@@ -6,19 +6,32 @@ import { DeleteButton } from './DeleteButton';
 import { CardTitle } from './CardTitle';
 import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
+import { Can } from '../auth/Can';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface ProblemsTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
+  /** Redirect readers who force a create action (defense in depth). */
+  onWriteDenied?: () => void;
 }
 
-export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
+export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: ProblemsTabProps) {
   const queryClient = useQueryClient();
+  const { canWrite } = useRole();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const openCreate = () => {
+    if (!canWrite) {
+      onWriteDenied?.();
+      return;
+    }
+    setIsFormOpen(true);
+  };
 
   const { data: problems = [], isLoading: loading, error: queryError } = useQuery<Problem[]>({
     queryKey: ['problems', searchQuery],
@@ -52,7 +65,7 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
 
   return (
     <div className="tab-split-container">
-      {isFormOpen && (
+      {canWrite && isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <aside className="creation-panel">
@@ -107,23 +120,25 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
             <div className="error-banner">{(queryError as Error).message || 'Failed to load problems'}</div>
           ) : (
           <div className="cards-grid">
-            <article
-              className="entity-card add-card-trigger btn-problem"
-              onClick={() => setIsFormOpen(true)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setIsFormOpen(true);
-                }
-              }}
-            >
-              <div className="add-card-content">
-                <span className="add-icon">+</span>
-                <span className="add-text">Create Problem Card</span>
-              </div>
-            </article>
+            <Can action="write">
+              <article
+                className="entity-card add-card-trigger btn-problem"
+                onClick={openCreate}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openCreate();
+                  }
+                }}
+              >
+                <div className="add-card-content">
+                  <span className="add-icon">+</span>
+                  <span className="add-text">Create Problem Card</span>
+                </div>
+              </article>
+            </Can>
 
             {problems.map((p) => (
               <article

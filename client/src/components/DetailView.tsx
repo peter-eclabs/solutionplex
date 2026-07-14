@@ -11,6 +11,8 @@ import { MultiSelect } from './MultiSelect';
 import { ProblemSolutions } from './ProblemSolutions';
 import { SolutionPrototypes } from './SolutionPrototypes';
 import { invalidatePlexCaches } from '../api/queryKeys';
+import { useRole } from '../auth/AuthContext';
+import { Can } from '../auth/Can';
 
 interface DetailViewProps {
   component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
@@ -27,6 +29,7 @@ type DetailPayload =
 
 export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   const queryClient = useQueryClient();
+  const { canWrite } = useRole();
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -399,7 +402,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       <div className="detail-layout">
         {/* Main Details Section */}
         <div className="detail-main-card">
-          {isEditing ? (
+          {isEditing && canWrite ? (
             <form onSubmit={handleEditSubmit} className="crud-form detail-edit-form">
               <div className="form-header-edit">
                 <h3>Edit Component Core</h3>
@@ -544,9 +547,11 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   {component.slice(0, -1).toUpperCase()}
                 </div>
                 <h2>{getEntityTitle()}</h2>
-                <button onClick={() => setIsEditing(true)} className="edit-trigger-btn">
-                  Edit Card
-                </button>
+                <Can action="write">
+                  <button onClick={() => setIsEditing(true)} className="edit-trigger-btn">
+                    Edit Card
+                  </button>
+                </Can>
               </div>
 
                 <div className="viewer-body">

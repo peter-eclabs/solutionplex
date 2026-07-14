@@ -5,19 +5,32 @@ import type { Architecture } from '../api/client';
 import { DeleteButton } from './DeleteButton';
 import { CardTitle } from './CardTitle';
 import { CharCounter } from './CharCounter';
+import { Can } from '../auth/Can';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface ArchitectureTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
+  /** Redirect readers who force a create action (defense in depth). */
+  onWriteDenied?: () => void;
 }
 
-export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabProps) {
+export function ArchitectureTab({ searchQuery, onCardClick, onWriteDenied }: ArchitectureTabProps) {
   const queryClient = useQueryClient();
+  const { canWrite } = useRole();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const openCreate = () => {
+    if (!canWrite) {
+      onWriteDenied?.();
+      return;
+    }
+    setIsFormOpen(true);
+  };
 
   const previewDescription = (text: string, max = 140): string =>
     text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
@@ -54,7 +67,7 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
 
   return (
     <div className="tab-split-container">
-      {isFormOpen && (
+      {canWrite && isFormOpen && (
         <div className="modal-overlay" onClick={() => setIsFormOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <aside className="creation-panel">
@@ -109,23 +122,25 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
             <div className="error-banner">{(queryError as Error).message || 'Failed to load architectures'}</div>
           ) : (
           <div className="cards-grid">
-            <article
-              className="entity-card add-card-trigger btn-arch"
-              onClick={() => setIsFormOpen(true)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setIsFormOpen(true);
-                }
-              }}
-            >
-              <div className="add-card-content">
-                <span className="add-icon">+</span>
-                <span className="add-text">Create Architecture Card</span>
-              </div>
-            </article>
+            <Can action="write">
+              <article
+                className="entity-card add-card-trigger btn-arch"
+                onClick={openCreate}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openCreate();
+                  }
+                }}
+              >
+                <div className="add-card-content">
+                  <span className="add-icon">+</span>
+                  <span className="add-text">Create Architecture Card</span>
+                </div>
+              </article>
+            </Can>
 
             {archs.map((a) => (
               <article

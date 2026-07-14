@@ -5,6 +5,8 @@ import type { AppShort, AppPrototype } from '../api/client';
 import { CreateAppModal } from './CreateAppModal';
 import { useToast } from './ToastContext';
 import { formatCreatedOn } from './formatCreatedOn';
+import { Can } from '../auth/Can';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface SolutionPrototypesProps {
@@ -22,6 +24,7 @@ export function SolutionPrototypes({
   onChanged,
   onNavigate,
 }: SolutionPrototypesProps) {
+  const { canWrite } = useRole();
   const { showToast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -142,22 +145,24 @@ export function SolutionPrototypes({
     <div className="solution-prototypes-section" onClick={(e) => e.stopPropagation()}>
       <div className="problem-solutions-header">
         <span className="solution-prototypes-label">Prototypes ({apps.length})</span>
-        <div className="solution-prototypes-actions">
-          <button
-            type="button"
-            className="propose-solution-btn"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            + Create Prototype
-          </button>
-          <button
-            type="button"
-            className="propose-solution-btn"
-            onClick={() => setIsLinkOpen(true)}
-          >
-            + Link Existing
-          </button>
-        </div>
+        <Can action="write">
+          <div className="solution-prototypes-actions">
+            <button
+              type="button"
+              className="propose-solution-btn"
+              onClick={() => setIsCreateOpen(true)}
+            >
+              + Create Prototype
+            </button>
+            <button
+              type="button"
+              className="propose-solution-btn"
+              onClick={() => setIsLinkOpen(true)}
+            >
+              + Link Existing
+            </button>
+          </div>
+        </Can>
       </div>
 
       {apps.length === 0 ? (
@@ -211,7 +216,7 @@ export function SolutionPrototypes({
                     Cancel
                   </button>
                 </div>
-              ) : (
+              ) : canWrite ? (
                 <button
                   type="button"
                   className="prototype-remove-trigger"
@@ -223,22 +228,24 @@ export function SolutionPrototypes({
                 >
                   ✕
                 </button>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
       )}
 
-      <CreateAppModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreated={onChanged}
-        solutionId={solutionId}
-        solutionTitle={solutionTitle}
-        heading="Create Prototype"
-      />
+      {canWrite && (
+        <CreateAppModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={onChanged}
+          solutionId={solutionId}
+          solutionTitle={solutionTitle}
+          heading="Create Prototype"
+        />
+      )}
 
-      {isLinkOpen && (
+      {canWrite && isLinkOpen && (
         <div className="modal-overlay" onClick={() => setIsLinkOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <aside className="creation-panel">

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useRole } from '../auth/AuthContext';
 import { useToast } from './ToastContext';
 
 interface DeleteButtonProps {
@@ -18,12 +19,17 @@ export function DeleteButton({
   entityLabel,
   title = 'Delete',
 }: DeleteButtonProps) {
+  const { canWrite } = useRole();
   const CONFIRM_WINDOW_MS = 1500;
   const [armed, setArmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const armTimer = useRef<number | null>(null);
   const armedRef = useRef(false);
   const { showToast } = useToast();
+
+  if (!canWrite) {
+    return null;
+  }
 
   const disarm = () => {
     armedRef.current = false;

@@ -8,16 +8,29 @@ import { CardTitle } from './CardTitle';
 import { LabelPreview } from './LabelPreview';
 import { formatCreatedOn } from './formatCreatedOn';
 import { invalidatePlexCaches } from '../api/queryKeys';
+import { Can } from '../auth/Can';
+import { useRole } from '../auth/AuthContext';
 import './TabStyles.css';
 
 interface AppsTabProps {
   searchQuery: string;
   onCardClick: (id: string) => void;
+  /** Redirect readers who force a create action (defense in depth). */
+  onWriteDenied?: () => void;
 }
 
-export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
+export function AppsTab({ searchQuery, onCardClick, onWriteDenied }: AppsTabProps) {
   const queryClient = useQueryClient();
+  const { canWrite } = useRole();
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const openCreate = () => {
+    if (!canWrite) {
+      onWriteDenied?.();
+      return;
+    }
+    setIsFormOpen(true);
+  };
 
   const { data: apps = [], isLoading: loading, error: queryError } = useQuery<AppPrototype[]>({
     queryKey: ['apps', searchQuery],
@@ -26,11 +39,13 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
 
   return (
     <div className="tab-split-container">
-      <CreateAppModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onCreated={() => invalidatePlexCaches(queryClient)}
-      />
+      {canWrite && (
+        <CreateAppModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onCreated={() => invalidatePlexCaches(queryClient)}
+        />
+      )}
 
       <section className="list-panel">
         {loading ? (
@@ -39,23 +54,25 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
           <div className="error-banner">{(queryError as Error).message || 'Failed to load apps'}</div>
         ) : (
           <div className="cards-grid">
-            <article
-              className="entity-card add-card-trigger btn-app"
-              onClick={() => setIsFormOpen(true)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setIsFormOpen(true);
-                }
-              }}
-            >
-              <div className="add-card-content">
-                <span className="add-icon">+</span>
-                <span className="add-text">Create App Card</span>
-              </div>
-            </article>
+            <Can action="write">
+              <article
+                className="entity-card add-card-trigger btn-app"
+                onClick={openCreate}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openCreate();
+                  }
+                }}
+              >
+                <div className="add-card-content">
+                  <span className="add-icon">+</span>
+                  <span className="add-text">Create App Card</span>
+                </div>
+              </article>
+            </Can>
 
             {apps.map((app) => (
               <article
