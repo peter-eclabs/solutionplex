@@ -5,7 +5,7 @@ from bson import ObjectId
 
 from server.database import client
 from server.database.client import next_code
-from server.schemas.models import ProblemCreate, ProblemUpdate
+from server.schemas.models import CurrentUser, ProblemCreate, ProblemUpdate, Role
 
 
 async def create_problem(data: ProblemCreate) -> dict:
@@ -18,13 +18,19 @@ async def create_problem(data: ProblemCreate) -> dict:
     return doc
 
 
-async def get_problem(problem_id: str) -> Optional[dict]:
+async def get_problem(problem_id: str, current_user: Optional[CurrentUser] = None) -> Optional[dict]:
     if not ObjectId.is_valid(problem_id):
         return None
     doc = await client.problems_col.find_one({"_id": ObjectId(problem_id)})
     if not doc:
         return None
+    if current_user is not None and current_user.role == Role.READER and doc.get("hidden") is True:
+        from fastapi import HTTPException, status
 
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This problem is hidden from readers",
+        )
     # Resolve solutions associated with this problem
     solutions_cursor = client.solutions_col.find(
         {"problem_id": ObjectId(problem_id)}
@@ -36,8 +42,8 @@ async def get_problem(problem_id: str) -> Optional[dict]:
     return doc
 
 
-async def list_problems(q: Optional[str] = None) -> List[dict]:
-    filter_query = {}
+async def list_problems(q: Optional[str] = None, current_user: Optional[CurrentUser] = None) -> List[dict]:
+    filter_query: dict = {}
     if q:
         filter_query = {
             "$or": [
@@ -45,6 +51,8 @@ async def list_problems(q: Optional[str] = None) -> List[dict]:
                 {"description": {"$regex": q, "$options": "i"}},
             ]
         }
+    if current_user is not None and current_user.role == Role.READER:
+        filter_query["hidden"] = {"$ne": True}
     cursor = client.problems_col.find(filter_query)
     problems = await cursor.to_list(length=100)
 
