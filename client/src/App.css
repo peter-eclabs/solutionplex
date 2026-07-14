@@ -177,6 +177,66 @@
   }
 }
 
+/* Auth header controls */
+.auth-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.auth-user {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-role {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  border-radius: 3px;
+  background-color: var(--accent-cyan-dim);
+}
+
+.auth-logout-btn {
+  background: transparent;
+  border: 1px solid var(--border-grid);
+  color: var(--text-secondary);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.auth-logout-btn:hover {
+  border-color: var(--accent-problem);
+  color: var(--accent-problem);
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 /* Responsive Tweaks */
 @media (max-width: 768px) {
   .app-header {
@@ -186,6 +246,10 @@
   }
   .search-group {
     flex: 1;
+  }
+  .auth-group {
+    margin-left: 0;
+    justify-content: flex-end;
   }
   .tab-navigation {
     flex-wrap: nowrap;

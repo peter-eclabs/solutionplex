@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import './App.css';
 import { ProblemsTab } from './components/ProblemsTab';
 import { ArchitectureTab } from './components/ArchitectureTab';
@@ -6,6 +7,8 @@ import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
 import { DetailView } from './components/DetailView';
 import { ToastProvider } from './components/ToastContext';
+import { LoginView } from './components/LoginView';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 
 export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
 
@@ -31,9 +34,25 @@ function parseRoute(pathname: string): { component: Tab; id: string } | null {
 }
 
 export function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { user, isLoading, logout } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('problems');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  const handleLogout = useCallback(() => {
+    logout();
+    // clear() avoids refetching protected queries with no token
+    queryClient.clear();
+  }, [logout, queryClient]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -71,6 +90,14 @@ export function App() {
     }
   }, [currentPath]);
 
+  if (isLoading) {
+    return <div className="loading-screen">Loading…</div>;
+  }
+
+  if (!user) {
+    return <LoginView />;
+  }
+
   return (
     <ToastProvider>
       <div className="app-container">
@@ -92,6 +119,14 @@ export function App() {
               />
             </div>
           )}
+
+          <div className="auth-group">
+            <span className="auth-user">{user.email}</span>
+            <span className="auth-role">{user.role}</span>
+            <button type="button" className="auth-logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </header>
 
         {!routeInfo && (

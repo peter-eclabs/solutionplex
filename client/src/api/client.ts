@@ -1,3 +1,6 @@
+import { TOKEN_KEY } from '../auth/jwt';
+import type { UserRole } from '../auth/jwt';
+
 export interface ProblemShort {
   id: string;
   code?: string | null;
@@ -92,14 +95,40 @@ export interface AppPrototype {
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers || {}),
-    },
+    headers,
   });
+
+  if (response.status === 401) {
+    // Token expired or invalid — clear and reload to show login
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+    throw new Error('Session expired');
+  }
+
   if (!response.ok) {
     const errorMsg = await response.text();
     throw new Error(errorMsg || `API request failed with status ${response.status}`);
@@ -163,4 +192,46 @@ export const api = {
   deleteApp: (id: string) =>
     request<{ detail: string }>(`/api/apps/${id}`, { method: 'DELETE' }),
   getReadme: (githubUrl: string) => request<{ readme_content: string }>(`/api/apps/readme?github_url=${encodeURIComponent(githubUrl)}`),
-};;
+};
+
+/**
+ * Auth endpoints. Login uses form-urlencoded (OAuth2PasswordRequestForm);
+ * register uses JSON via the shared request helper.
+ */
+export const authApi = {
+  /**
+   * Obtain a JWT via OAuth2 password grant.
+   * Form field `username` is the user's email.
+   */
+  login: (email: string, password: string): Promise<TokenResponse> => {
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
+
+    return fetch(`${API_URL}/api/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Login failed');
+      }
+      return res.json() as Promise<TokenResponse>;
+    });
+  },
+
+  /**
+   * Register a new user. Default role is reader when omitted.
+   */
+  register: (email: string, password: string, role?: UserRole) =>
+    request<UserResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(
+        role !== undefined ? { email, password, role } : { email, password }
+      ),
+    }),
+
+  /** Current authenticated user from the Bearer token. */
+  me: () => request<UserResponse>('/api/auth/me'),
+};
