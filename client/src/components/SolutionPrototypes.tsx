@@ -7,6 +7,7 @@ import { useToast } from './ToastContext';
 import { formatCreatedOn } from './formatCreatedOn';
 import { Can } from '../auth/Can';
 import { useRole } from '../auth/AuthContext';
+import { HiddenBadge } from './HiddenBadge';
 import './TabStyles.css';
 
 interface SolutionPrototypesProps {
@@ -177,6 +178,7 @@ export function SolutionPrototypes({
                 onClick={() => onNavigate(`/apps/${app.id}`)}
               >
                  <span className="problem-solution-title">{app.title}</span>
+                 {app.hidden && <HiddenBadge />}
                 {app.created_at && (
                   <span className="problem-solution-created">
                     {formatCreatedOn(app.created_at)}

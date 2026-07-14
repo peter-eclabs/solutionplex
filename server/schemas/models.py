@@ -131,17 +131,20 @@ class AppShort(BaseModel):
     code: Optional[str] = None
     title: str
     created_at: Optional[datetime] = None
+    hidden: Optional[bool] = None
 
 
 # Problems
 class ProblemCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=1)
+    hidden: bool = False
 
 
 class ProblemUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, min_length=1)
+    hidden: Optional[bool] = None
 
 
 class ProblemResponse(BaseModel):
@@ -152,6 +155,7 @@ class ProblemResponse(BaseModel):
     solutions: List[SolutionShort] = []
     created_at: datetime
     updated_at: datetime
+    hidden: bool = False
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -243,6 +247,7 @@ class SolutionResponse(BaseModel):
     apps: List[AppShort] = []
     created_at: datetime
     updated_at: datetime
+    hidden: bool = False
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -286,6 +291,7 @@ class AppResponse(BaseModel):
     infrastructures: List[InfrastructureShort] = []
     created_at: datetime
     updated_at: datetime
+    hidden: bool = False
 
     model_config = ConfigDict(
         populate_by_name=True,

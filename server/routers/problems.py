@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import ProblemCreate, ProblemResponse, ProblemUpdate, Role
+from server.schemas.models import CurrentUser, ProblemCreate, ProblemResponse, ProblemUpdate, Role
 from server.security.deps import require_role
 from server.services import problems as service
 
@@ -40,9 +40,9 @@ async def create_problem(data: ProblemCreate):
     summary="List all Problems",
     description="Retrieves a list of all Problem cards, optionally filtered by keyword.",
 )
-async def list_problems(q: Optional[str] = None):
+async def list_problems(q: Optional[str] = None, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        return await service.list_problems(q=q)
+        return await service.list_problems(q=q, current_user=user)
     except HTTPException:
         raise
     except Exception as e:
@@ -60,9 +60,9 @@ async def list_problems(q: Optional[str] = None):
     summary="Get Problem details",
     description="Retrieves detail view for a specific Problem card.",
 )
-async def get_problem(id: str):
+async def get_problem(id: str, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        doc = await service.get_problem(id)
+        doc = await service.get_problem(id, current_user=user)
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"

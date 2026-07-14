@@ -9,7 +9,8 @@ import httpx
 
 from server.database import client
 from server.database.client import next_code
-from server.schemas.models import AppCreate, AppUpdate
+from server.schemas.models import AppCreate, AppUpdate, CurrentUser, Role
+from server.services.visibility import hidden_problem_ids
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,7 @@ async def _populate_effective_labels(a: dict, sol: Optional[dict]) -> None:
 async def populate_app(a: dict) -> dict:
     sol: Optional[dict] = None
     sol_id = a.get("solution_id")
+    problem_hidden = False
     if sol_id:
         sol = await client.solutions_col.find_one(
             {"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id}
@@ -162,15 +164,15 @@ async def populate_app(a: dict) -> dict:
                 "title": sol["title"],
             }
             prob = await client.problems_col.find_one({"_id": sol["problem_id"]})
-            a["problem"] = (
-                {
+            if prob:
+                problem_hidden = bool(prob.get("hidden"))
+                a["problem"] = {
                     "id": str(prob["_id"]),
                     "code": prob.get("code"),
                     "title": prob["title"],
                 }
-                if prob
-                else None
-            )
+            else:
+                a["problem"] = None
         else:
             a["solution"] = None
             a["problem"] = None
@@ -183,20 +185,37 @@ async def populate_app(a: dict) -> dict:
     else:
         a["solutions"] = []
 
+    a["hidden"] = problem_hidden
+
     await _populate_effective_labels(a, sol)
     return a
 
 
-async def get_app(app_id: str) -> Optional[dict]:
+async def get_app(app_id: str, current_user: Optional[CurrentUser] = None) -> Optional[dict]:
     if not ObjectId.is_valid(app_id):
         return None
     a = await client.apps_col.find_one({"_id": ObjectId(app_id)})
     if not a:
         return None
+    if current_user is not None and current_user.role == Role.READER:
+        sol_id = a.get("solution_id")
+        if sol_id:
+            sol = await client.solutions_col.find_one(
+                {"_id": ObjectId(sol_id) if isinstance(sol_id, str) else sol_id}
+            )
+            if sol:
+                prob = await client.problems_col.find_one({"_id": sol["problem_id"]})
+                if prob and prob.get("hidden") is True:
+                    from fastapi import HTTPException, status
+
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="This app is hidden from readers",
+                    )
     return await populate_app(a)
 
 
-async def list_apps(q: Optional[str] = None) -> List[dict]:
+async def list_apps(q: Optional[str] = None, current_user: Optional[CurrentUser] = None) -> List[dict]:
     filter_query = {}
     if q:
         filter_query = {
@@ -208,9 +227,16 @@ async def list_apps(q: Optional[str] = None) -> List[dict]:
     cursor = client.apps_col.find(filter_query)
     apps = await cursor.to_list(length=100)
 
+    hidden_ids: set[str] = set()
+    if current_user is not None and current_user.role == Role.READER:
+        hidden_ids = await hidden_problem_ids()
+
     resolved_list = []
     for a in apps:
-        resolved_list.append(await populate_app(a))
+        pop = await populate_app(a)
+        if hidden_ids and pop.get("problem") and pop["problem"]["id"] in hidden_ids:
+            continue
+        resolved_list.append(pop)
     return resolved_list
 
 
