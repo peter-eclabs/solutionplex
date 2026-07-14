@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import Role, SolutionCreate, SolutionResponse, SolutionUpdate
+from server.schemas.models import CurrentUser, Role, SolutionCreate, SolutionResponse, SolutionUpdate
 from server.security.deps import require_role
 from server.services import solutions as service
 
@@ -44,9 +44,9 @@ async def create_solution(data: SolutionCreate):
     summary="List all Solutions",
     description="Retrieves a list of all Solution cards, optionally filtered by keyword.",
 )
-async def list_solutions(q: Optional[str] = None):
+async def list_solutions(q: Optional[str] = None, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        return await service.list_solutions(q=q)
+        return await service.list_solutions(q=q, current_user=user)
     except HTTPException:
         raise
     except Exception as e:
@@ -64,9 +64,9 @@ async def list_solutions(q: Optional[str] = None):
     summary="Get Solution details",
     description="Retrieves details of a specific Solution card, fully populating references.",
 )
-async def get_solution(id: str):
+async def get_solution(id: str, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        doc = await service.get_solution(id)
+        doc = await service.get_solution(id, current_user=user)
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

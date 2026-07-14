@@ -4,8 +4,9 @@ from typing import List, Optional
 from bson import ObjectId
 
 from server.database import client
-from server.schemas.models import SolutionCreate, SolutionUpdate
+from server.schemas.models import CurrentUser, Role, SolutionCreate, SolutionUpdate
 from server.services.apps import _resolve_label_docs, _union_ref_ids
+from server.services.visibility import hidden_problem_ids
 
 
 async def create_solution(data: SolutionCreate) -> dict:
@@ -64,6 +65,7 @@ async def populate_solution(s: dict) -> dict:
         if prob
         else None
     )
+    s["hidden"] = bool(prob and prob.get("hidden"))
 
     own_arch = s.get("architecture_ids") or []
     own_infra = s.get("infrastructure_ids") or []
@@ -85,6 +87,7 @@ async def populate_solution(s: dict) -> dict:
             "code": a.get("code"),
             "title": a["title"],
             "created_at": a.get("created_at"),
+            "hidden": bool(prob and prob.get("hidden")),
         }
         for a in apps
     ]
@@ -104,16 +107,25 @@ async def populate_solution(s: dict) -> dict:
     return s
 
 
-async def get_solution(solution_id: str) -> Optional[dict]:
+async def get_solution(solution_id: str, current_user: Optional[CurrentUser] = None) -> Optional[dict]:
     if not ObjectId.is_valid(solution_id):
         return None
     s = await client.solutions_col.find_one({"_id": ObjectId(solution_id)})
     if not s:
         return None
+    if current_user is not None and current_user.role == Role.READER:
+        prob = await client.problems_col.find_one({"_id": s["problem_id"]})
+        if prob and prob.get("hidden") is True:
+            from fastapi import HTTPException, status
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This solution is hidden from readers",
+            )
     return await populate_solution(s)
 
 
-async def list_solutions(q: Optional[str] = None) -> List[dict]:
+async def list_solutions(q: Optional[str] = None, current_user: Optional[CurrentUser] = None) -> List[dict]:
     filter_query = {}
     if q:
         filter_query = {
@@ -125,9 +137,17 @@ async def list_solutions(q: Optional[str] = None) -> List[dict]:
     cursor = client.solutions_col.find(filter_query)
     solutions = await cursor.to_list(length=100)
 
+    hidden_ids = set()
+    if current_user is not None and current_user.role == Role.READER:
+        hidden_ids = await hidden_problem_ids()
+        solutions = [s for s in solutions if str(s.get("problem_id")) not in hidden_ids]
+
     resolved_list = []
     for s in solutions:
-        resolved_list.append(await populate_solution(s))
+        resolved = await populate_solution(s)
+        if current_user is not None and current_user.role == Role.READER:
+            resolved["hidden"] = str(s.get("problem_id")) in hidden_ids
+        resolved_list.append(resolved)
     return resolved_list
 
 
