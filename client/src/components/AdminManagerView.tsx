@@ -34,11 +34,11 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
     void loadUsers();
   }, [loadUsers]);
 
-  const handleGrantAdmin = async (userId: string) => {
+  const handleSetRole = async (userId: string, role: 'admin' | 'reader') => {
     setBusyId(userId);
     setError('');
     try {
-      await adminApi.setRole(userId, 'admin');
+      await adminApi.setRole(userId, role);
       await loadUsers();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -65,7 +65,7 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
       </div>
 
       <p className="admin-manager-subtitle">
-        Existing logins. Grant admin privilege to a selected user.
+        Existing logins. Grant or revoke admin privilege for a selected user.
       </p>
 
       {error && <div className="admin-manager-error">{error}</div>}
@@ -85,7 +85,7 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
           </thead>
           <tbody>
             {users.map((u) => {
-              const canGrant = u.role !== 'admin' && u.role !== 'superadmin';
+              const isBusy = busyId === u.id;
               return (
                 <tr key={u.id}>
                   <td className="admin-user-email">{u.email}</td>
@@ -95,14 +95,23 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
                     </span>
                   </td>
                   <td>
-                    {canGrant ? (
+                    {u.role === 'reader' ? (
                       <button
                         type="button"
                         className="admin-grant-btn"
-                        disabled={busyId === u.id}
-                        onClick={() => void handleGrantAdmin(u.id)}
+                        disabled={isBusy}
+                        onClick={() => void handleSetRole(u.id, 'admin')}
                       >
-                        {busyId === u.id ? 'Updating…' : 'Grant admin'}
+                        {isBusy ? 'Updating…' : 'Grant admin'}
+                      </button>
+                    ) : u.role === 'admin' ? (
+                      <button
+                        type="button"
+                        className="admin-revoke-btn"
+                        disabled={isBusy}
+                        onClick={() => void handleSetRole(u.id, 'reader')}
+                      >
+                        {isBusy ? 'Updating…' : 'Revoke admin'}
                       </button>
                     ) : (
                       <span className="admin-no-action">—</span>

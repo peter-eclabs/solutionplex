@@ -214,8 +214,17 @@ export const authApi = {
       body: formData,
     }).then(async (res) => {
       if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Login failed');
+        const body = await res.text();
+        let detail = body;
+        try {
+          const parsed = JSON.parse(body) as { detail?: unknown };
+          if (typeof parsed.detail === 'string') {
+            detail = parsed.detail;
+          }
+        } catch {
+          // keep raw body
+        }
+        throw new Error(detail || 'Login failed');
       }
       return res.json() as Promise<TokenResponse>;
     });

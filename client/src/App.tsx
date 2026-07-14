@@ -158,7 +158,13 @@ function AppContent() {
 
           <div className="auth-group">
             <span className="auth-user">{user.email}</span>
-            <span className="auth-role">{user.role}</span>
+            <span className={`auth-role role-${user.role}`}>
+              {user.role === 'superadmin'
+                ? 'SuperAdmin'
+                : user.role === 'admin'
+                  ? 'Admin'
+                  : 'Reader'}
+            </span>
             {canManage && (
               <button
                 type="button"

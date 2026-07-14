@@ -114,6 +114,35 @@
   transition: border-color var(--transition-fast);
 }
 
+.login-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-password-wrap input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.login-password-toggle:hover {
+  color: var(--accent-cyan);
+}
+
 .login-field input:focus {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 10px rgba(0, 216, 246, 0.1);

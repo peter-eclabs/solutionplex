@@ -39,7 +39,8 @@
 }
 
 .admin-back-btn,
-.admin-grant-btn {
+.admin-grant-btn,
+.admin-revoke-btn {
   background: transparent;
   border: 1px solid var(--border-grid);
   color: var(--text-secondary);
@@ -49,7 +50,7 @@
   text-transform: uppercase;
   cursor: pointer;
   border-radius: 3px;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
 }
 
 .admin-back-btn:hover {
@@ -66,7 +67,17 @@
   background-color: var(--accent-cyan-dim);
 }
 
-.admin-grant-btn:disabled {
+.admin-revoke-btn {
+  border-color: var(--accent-problem);
+  color: var(--accent-problem);
+}
+
+.admin-revoke-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent-problem) 15%, transparent);
+}
+
+.admin-grant-btn:disabled,
+.admin-revoke-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -109,14 +120,21 @@
 }
 
 .admin-role-badge.role-superadmin {
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
-  background-color: var(--accent-cyan-dim);
+  border-color: #f5c542;
+  color: #f5c542;
+  background-color: rgba(245, 197, 66, 0.12);
 }
 
 .admin-role-badge.role-admin {
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
+  border-color: #e040fb;
+  color: #e040fb;
+  background-color: rgba(224, 64, 251, 0.12);
+}
+
+.admin-role-badge.role-reader {
+  border-color: #ff9800;
+  color: #ff9800;
+  background-color: rgba(255, 152, 0, 0.12);
 }
 
 .admin-no-action {
