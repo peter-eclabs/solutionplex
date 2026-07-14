@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import AppCreate, AppResponse, AppUpdate, Role
+from server.schemas.models import AppCreate, AppResponse, AppUpdate, CurrentUser, Role
 from server.security.deps import require_role
 from server.services import apps as service
 
@@ -44,9 +44,9 @@ async def create_app(data: AppCreate):
     summary="List all Apps",
     description="Retrieves a list of all App cards, optionally filtered by keyword.",
 )
-async def list_apps(q: Optional[str] = None):
+async def list_apps(q: Optional[str] = None, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        return await service.list_apps(q=q)
+        return await service.list_apps(q=q, current_user=user)
     except HTTPException:
         raise
     except Exception as e:
@@ -88,9 +88,9 @@ async def fetch_readme(github_url: str):
     summary="Get App details",
     description="Retrieves detail view for a specific App card.",
 )
-async def get_app(id: str):
+async def get_app(id: str, user: CurrentUser = Depends(require_role(Role.READER))):
     try:
-        doc = await service.get_app(id)
+        doc = await service.get_app(id, current_user=user)
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="App not found"

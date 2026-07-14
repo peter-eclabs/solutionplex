@@ -183,3 +183,80 @@ def test_list_solutions_reader_excludes_hidden_problem(client, mock_db, reader_h
     assert len(out) == 1
     assert out[0]["title"] == "S2"
     assert out[0]["hidden"] is False
+
+
+def test_get_app_linked_hidden_problem_reader_403(client, mock_db, reader_headers):
+    mock_db.apps.find_one = AsyncMock(
+        return_value={
+            "_id": ObjectId("60b8d5a1b55a8b0c848b4701"),
+            "title": "A",
+            "description": "d",
+            "github_url": "https://github.com/x/y",
+            "solution_id": ObjectId("60b8d5a1b55a8b0c848b4601"),
+            "created_at": NOW,
+            "updated_at": NOW,
+        }
+    )
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={
+            "_id": ObjectId("60b8d5a1b55a8b0c848b4601"),
+            "title": "S",
+            "problem_id": ObjectId("60b8d5a1b55a8b0c848b4502"),
+        }
+    )
+    mock_db.problems.find_one = AsyncMock(
+        return_value={
+            "_id": ObjectId("60b8d5a1b55a8b0c848b4502"),
+            "title": "P",
+            "hidden": True,
+        }
+    )
+    res = client.get("/api/apps/60b8d5a1b55a8b0c848b4701", headers=reader_headers)
+    assert res.status_code == 403
+
+
+def test_list_apps_reader_excludes_hidden_problem(client, mock_db, reader_headers):
+    hidden_pid = ObjectId("60b8d5a1b55a8b0c848b4502")
+    sol_id = ObjectId("60b8d5a1b55a8b0c848b4601")
+    mock_db.problems.find = MagicMock(
+        side_effect=lambda f=None, *a, **k: _cursor(
+            [{"_id": hidden_pid, "title": "P", "hidden": True}]
+        )
+    )
+    mock_db.apps.find = MagicMock(
+        side_effect=lambda f=None, *a, **k: _cursor(
+            [
+                {
+                    "_id": ObjectId("60b8d5a1b55a8b0c848b4701"),
+                    "title": "A1",
+                    "description": "d",
+                    "github_url": "https://github.com/x/y",
+                    "solution_id": sol_id,
+                    "created_at": NOW,
+                    "updated_at": NOW,
+                },
+                {
+                    "_id": ObjectId("60b8d5a1b55a8b0c848b4702"),
+                    "title": "A2",
+                    "description": "d",
+                    "github_url": "https://github.com/x/z",
+                    "solution_id": None,
+                    "created_at": NOW,
+                    "updated_at": NOW,
+                },
+            ]
+        )
+    )
+    mock_db.solutions.find_one = AsyncMock(
+        return_value={"_id": sol_id, "title": "S", "problem_id": hidden_pid}
+    )
+    mock_db.problems.find_one = AsyncMock(
+        return_value={"_id": hidden_pid, "title": "P", "hidden": True}
+    )
+    mock_db.architectures.find = MagicMock(return_value=_cursor([]))
+    res = client.get("/api/apps/", headers=reader_headers)
+    assert res.status_code == 200
+    out = res.json()
+    # A1 linked to hidden problem excluded; A2 has no solution so visible
+    assert len(out) == 1
+    assert out[0]["title"] == "A2"
