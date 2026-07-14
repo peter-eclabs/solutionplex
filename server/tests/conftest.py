@@ -56,6 +56,8 @@ def mock_db(monkeypatch):
     monkeypatch.setattr("server.database.client.users_col", mock_db.users)
 
     # Lifespan calls ensure_indexes on startup — avoid real MongoDB.
+    # seed_superadmin is mocked on server.main in the client fixtures only,
+    # so unit tests can still call the real service function.
     mock_ensure = AsyncMock(return_value=None)
     monkeypatch.setattr("server.database.client.ensure_indexes", mock_ensure)
 
@@ -69,6 +71,7 @@ def client(mock_db, monkeypatch):
 
     # Re-bind after import so lifespan never hits real MongoDB.
     monkeypatch.setattr(main_mod, "ensure_indexes", AsyncMock(return_value=None))
+    monkeypatch.setattr(main_mod, "seed_superadmin", AsyncMock(return_value=False))
 
     with TestClient(app) as test_client:
         yield test_client

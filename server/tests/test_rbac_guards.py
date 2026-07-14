@@ -108,6 +108,7 @@ def lenient_client(mock_db, monkeypatch):
     import server.main as main_mod
 
     monkeypatch.setattr(main_mod, "ensure_indexes", AsyncMock(return_value=None))
+    monkeypatch.setattr(main_mod, "seed_superadmin", AsyncMock(return_value=False))
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
 

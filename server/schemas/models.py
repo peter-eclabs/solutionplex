@@ -88,6 +88,12 @@ class UserResponse(BaseModel):
     )
 
 
+class UserRoleUpdate(BaseModel):
+    """Payload for changing a user's role (admin manager)."""
+
+    role: Role
+
+
 class Token(BaseModel):
     """OAuth2-style access token response."""
 

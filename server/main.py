@@ -19,6 +19,7 @@ from server.routers import (
     search,
     solutions,
 )
+from server.services.users import seed_superadmin
 
 # Logging config
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan: ensure MongoDB indexes on startup.
+    """Application lifespan: indexes + superadmin seed on startup.
 
     Args:
         app: The FastAPI application instance.
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         Control to the running application.
     """
     await ensure_indexes()
+    await seed_superadmin()
     yield
 
 
