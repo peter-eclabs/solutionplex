@@ -235,3 +235,18 @@ export const authApi = {
   /** Current authenticated user from the Bearer token. */
   me: () => request<UserResponse>('/api/auth/me'),
 };
+
+/**
+ * Superadmin-only user administration endpoints.
+ */
+export const adminApi = {
+  /** List all users (id, email, role). */
+  listUsers: () => request<UserResponse[]>('/api/admin/users'),
+
+  /** Set a user's role (e.g. grant admin). */
+  setRole: (userId: string, role: UserRole) =>
+    request<UserResponse>(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+};

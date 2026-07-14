@@ -7,6 +7,7 @@ import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
 import { DetailView } from './components/DetailView';
 import { UnauthorizedView } from './components/UnauthorizedView';
+import { AdminManagerView } from './components/AdminManagerView';
 import { ToastProvider } from './components/ToastContext';
 import { LoginView } from './components/LoginView';
 import { AuthProvider, useAuth, useRole } from './auth/AuthContext';
@@ -46,7 +47,7 @@ export function App() {
 
 function AppContent() {
   const { user, isLoading, logout } = useAuth();
-  const { role } = useRole();
+  const { role, canManage } = useRole();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('problems');
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +108,16 @@ function AppContent() {
   };
 
   const isUnauthorized = currentPath === '/unauthorized';
-  const routeInfo = isUnauthorized ? null : parseRoute(currentPath);
+  const isAdminRoute = currentPath === '/admin';
+  const routeInfo =
+    isUnauthorized || isAdminRoute ? null : parseRoute(currentPath);
+
+  // Superadmin-only route: force-nav by non-superadmin → unauthorized
+  useEffect(() => {
+    if (isAdminRoute && !hasMinRole(role, 'superadmin')) {
+      navigate('/unauthorized');
+    }
+  }, [isAdminRoute, role, navigate]);
 
   // Sync active tab with parsed route component so when user returns, they land on correct tab
   useEffect(() => {
@@ -134,7 +144,7 @@ function AppContent() {
             <span className="badge">MVP</span>
           </div>
 
-          {!routeInfo && !isUnauthorized && (
+          {!routeInfo && !isUnauthorized && !isAdminRoute && (
             <div className="search-group">
               <input
                 type="text"
@@ -149,13 +159,22 @@ function AppContent() {
           <div className="auth-group">
             <span className="auth-user">{user.email}</span>
             <span className="auth-role">{user.role}</span>
+            {canManage && (
+              <button
+                type="button"
+                className="auth-admin-btn"
+                onClick={() => navigateGuarded('/admin', 'superadmin')}
+              >
+                Admin manager
+              </button>
+            )}
             <button type="button" className="auth-logout-btn" onClick={handleLogout}>
               Logout
             </button>
           </div>
         </header>
 
-        {!routeInfo && !isUnauthorized && (
+        {!routeInfo && !isUnauthorized && !isAdminRoute && (
           <nav className="tab-navigation">
             {tabs.map((tab) => (
               <button
@@ -172,6 +191,8 @@ function AppContent() {
         <main className="main-content">
           {isUnauthorized ? (
             <UnauthorizedView onNavigate={navigate} />
+          ) : isAdminRoute && hasMinRole(role, 'superadmin') ? (
+            <AdminManagerView onNavigate={navigate} />
           ) : routeInfo ? (
             <DetailView
               component={routeInfo.component}

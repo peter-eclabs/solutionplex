@@ -1,0 +1,125 @@
+.admin-manager {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-grid);
+}
+
+.admin-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.admin-manager-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+.admin-manager-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  margin-bottom: 1.25rem;
+}
+
+.admin-manager-error {
+  border: 1px solid var(--accent-problem);
+  color: var(--accent-problem);
+  background: transparent;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+
+.admin-back-btn,
+.admin-grant-btn {
+  background: transparent;
+  border: 1px solid var(--border-grid);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.admin-back-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.admin-grant-btn {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.admin-grant-btn:hover:not(:disabled) {
+  background-color: var(--accent-cyan-dim);
+}
+
+.admin-grant-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border-grid);
+}
+
+.admin-user-table th {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.admin-user-email {
+  color: var(--text-primary);
+}
+
+.admin-role-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--border-grid);
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+
+.admin-role-badge.role-superadmin {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background-color: var(--accent-cyan-dim);
+}
+
+.admin-role-badge.role-admin {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.admin-no-action {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}

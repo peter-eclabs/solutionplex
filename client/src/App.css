@@ -226,6 +226,23 @@
   color: var(--accent-problem);
 }
 
+.auth-admin-btn {
+  background: transparent;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.auth-admin-btn:hover {
+  background-color: var(--accent-cyan-dim);
+}
+
 .loading-screen {
   display: flex;
   align-items: center;
