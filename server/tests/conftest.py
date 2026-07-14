@@ -72,3 +72,16 @@ def client(mock_db, monkeypatch):
 
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def admin_headers():
+    """Authorization headers for an Admin JWT (mutation-route tests)."""
+    from server.security.jwt import create_access_token
+
+    token = create_access_token(
+        subject="test-admin-id",
+        email="admin@example.com",
+        role="admin",
+    )
+    return {"Authorization": f"Bearer {token}"}

@@ -1,9 +1,10 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import ProblemCreate, ProblemResponse, ProblemUpdate
+from server.schemas.models import ProblemCreate, ProblemResponse, ProblemUpdate, Role
+from server.security.deps import require_role
 from server.services import problems as service
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/api/problems", tags=["Problems"])
     "/",
     response_model=ProblemResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Create a new Problem card",
     description="Creates a new Problem card in the database.",
 )
@@ -77,6 +79,7 @@ async def get_problem(id: str):
 @router.put(
     "/{id}",
     response_model=ProblemResponse,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Update a Problem card",
     description="Updates the title and/or description of a Problem card.",
 )
@@ -100,6 +103,7 @@ async def update_problem(id: str, data: ProblemUpdate):
 
 @router.delete(
     "/{id}",
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Delete a Problem card",
     description="Deletes a Problem card and cascades deletion to its linked Solutions.",
 )

@@ -9,7 +9,7 @@ def test_health(client):
     assert res.json() == {"status": "healthy", "service": "solutionplex-server"}
 
 
-def test_create_problem_router(client, mock_db):
+def test_create_problem_router(client, mock_db, admin_headers):
     mock_db.problems.insert_one = AsyncMock(
         return_value=type(
             "Result",
@@ -25,7 +25,7 @@ def test_create_problem_router(client, mock_db):
     res = client.post(
         "/api/problems/",
         json={"title": "DB Lock", "description": "Slow write lockouts"},
-    )
+        headers=admin_headers)
     assert res.status_code == 201
     data = res.json()
     assert data["title"] == "DB Lock"
@@ -33,7 +33,7 @@ def test_create_problem_router(client, mock_db):
     assert data["code"] == "PBM-001"
 
 
-def test_create_solution_relationship_validation(client, mock_db):
+def test_create_solution_relationship_validation(client, mock_db, admin_headers):
     # If problem is not found, return 400
     mock_db.problems.find_one = AsyncMock(return_value=None)
     res = client.post(
@@ -43,12 +43,12 @@ def test_create_solution_relationship_validation(client, mock_db):
             "description": "Add connection pooling",
             "problem_id": "60b8d5a1b55a8b0c848b4567",
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 400
     assert "Associated Problem not found" in res.json()["detail"]
 
 
-def test_create_solution_invalid_architecture(client, mock_db):
+def test_create_solution_invalid_architecture(client, mock_db, admin_headers):
     mock_db.problems.find_one = AsyncMock(
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
@@ -61,12 +61,12 @@ def test_create_solution_invalid_architecture(client, mock_db):
             "problem_id": "60b8d5a1b55a8b0c848b4567",
             "architecture_ids": ["60b8d5a1b55a8b0c848b4568"],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 400
     assert "Associated Architecture not found" in res.json()["detail"]
 
 
-def test_create_solution_invalid_infrastructure(client, mock_db):
+def test_create_solution_invalid_infrastructure(client, mock_db, admin_headers):
     mock_db.problems.find_one = AsyncMock(
         return_value={"_id": ObjectId("60b8d5a1b55a8b0c848b4567"), "title": "DB Lock"}
     )
@@ -83,7 +83,7 @@ def test_create_solution_invalid_infrastructure(client, mock_db):
             "architecture_ids": ["60b8d5a1b55a8b0c848b4568"],
             "infrastructure_ids": ["60b8d5a1b55a8b0c848b4569"],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 400
     assert "Associated Infrastructure not found" in res.json()["detail"]
 
@@ -115,7 +115,7 @@ def test_search_scoped_by_tab(client, mock_db):
     assert results[0]["title"] == "DB Lock"
 
 
-def test_create_solution_success(client, mock_db):
+def test_create_solution_success(client, mock_db, admin_headers):
     from datetime import datetime
 
     mock_db.problems.find_one = AsyncMock(
@@ -179,7 +179,7 @@ def test_create_solution_success(client, mock_db):
             "architecture_ids": ["60b8d5a1b55a8b0c848b4568"],
             "infrastructure_ids": ["60b8d5a1b55a8b0c848b4569"],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 201
     data = res.json()
     assert data["title"] == "Fix locks"
@@ -229,7 +229,7 @@ def test_fetch_readme_api_error(client, monkeypatch):
     assert "Failed to fetch README from GitHub API" in res.json()["detail"]
 
 
-def test_create_app_success(client, mock_db):
+def test_create_app_success(client, mock_db, admin_headers):
     from datetime import datetime
 
     sol_id = ObjectId("60b8d5a1b55a8b0c848b4570")
@@ -310,7 +310,7 @@ def test_create_app_success(client, mock_db):
             "live_url": "https://myprototype.vercel.app",
             "solution_id": str(sol_id),
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 201
     data = res.json()
     assert data["title"] == "Cache Monitor Admin"
@@ -325,7 +325,7 @@ def test_create_app_success(client, mock_db):
     assert inserted["doc"]["infrastructure_ids"] == [infra_id]
 
 
-def test_create_app_invalid_solution(client, mock_db):
+def test_create_app_invalid_solution(client, mock_db, admin_headers):
     # If solution is not found, return 400
     mock_db.solutions.find_one = AsyncMock(return_value=None)
     res = client.post(
@@ -337,7 +337,7 @@ def test_create_app_invalid_solution(client, mock_db):
             "live_url": "https://myprototype.vercel.app",
             "solution_id": "60b8d5a1b55a8b0c848b4570",
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 400
     assert "Associated Solution not found" in res.json()["detail"]
 
@@ -489,7 +489,7 @@ def test_problem_solution_app_relationship(client, mock_db):
 
 
 
-def test_create_app_with_own_labels_no_solution(client, mock_db):
+def test_create_app_with_own_labels_no_solution(client, mock_db, admin_headers):
     from datetime import datetime
 
     arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
@@ -561,7 +561,7 @@ def test_create_app_with_own_labels_no_solution(client, mock_db):
             "architecture_ids": [str(arch_id)],
             "infrastructure_ids": [str(infra_id)],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 201, res.text
     data = res.json()
     assert data["solution"] is None
@@ -702,7 +702,7 @@ def test_app_uses_own_labels_when_unlinked(client, mock_db):
     assert data["infrastructures"][0]["title"] == "OwnInfra"
 
 
-def test_link_app_leaves_app_labels_unchanged(client, mock_db):
+def test_link_app_leaves_app_labels_unchanged(client, mock_db, admin_headers):
     """Linking only sets solution_id; app stored + displayed labels stay the same."""
     from datetime import datetime
 
@@ -778,7 +778,8 @@ def test_link_app_leaves_app_labels_unchanged(client, mock_db):
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
     mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
-    res = client.put(f"/api/apps/{app_id}", json={"solution_id": str(sol_id)})
+    res = client.put(f"/api/apps/{app_id}", json={"solution_id": str(sol_id)},
+        headers=admin_headers)
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["solution"]["title"] == "Fix locks"
@@ -883,7 +884,7 @@ def test_solution_effective_labels_union_linked_apps(client, mock_db):
     ]
 
 
-def test_unlink_app_materializes_solution_labels(client, mock_db):
+def test_unlink_app_materializes_solution_labels(client, mock_db, admin_headers):
     """Unlinking copies solution concepts onto the app when own labels are empty."""
     from datetime import datetime
 
@@ -964,7 +965,8 @@ def test_unlink_app_materializes_solution_labels(client, mock_db):
     mock_db.architectures.find = MagicMock(side_effect=find_side_effect)
     mock_db.infrastructures.find = MagicMock(side_effect=find_side_effect)
 
-    res = client.put(f"/api/apps/{app_id}", json={"solution_id": ""})
+    res = client.put(f"/api/apps/{app_id}", json={"solution_id": ""},
+        headers=admin_headers)
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["solution"] is None
@@ -977,7 +979,7 @@ def test_unlink_app_materializes_solution_labels(client, mock_db):
     assert stored["doc"]["infrastructure_ids"] == [infra_sol]
 
 
-def test_update_linked_app_unions_solution_labels(client, mock_db):
+def test_update_linked_app_unions_solution_labels(client, mock_db, admin_headers):
     """Editing a linked app re-applies the union of its labels with the
     linked solution's labels, so inherited solution labels are not dropped."""
     from datetime import datetime
@@ -1062,7 +1064,7 @@ def test_update_linked_app_unions_solution_labels(client, mock_db):
             "architecture_ids": [str(arch_own)],
             "infrastructure_ids": [str(infra_own)],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 200, res.text
     data = res.json()
     # Stored labels are the union of the app's choice and the solution's labels.
@@ -1079,12 +1081,12 @@ def test_update_linked_app_unions_solution_labels(client, mock_db):
             "architecture_ids": [str(arch_own), str(arch_new)],
             "infrastructure_ids": [str(infra_own)],
         },
-    )
+        headers=admin_headers)
     assert res.status_code == 200, res.text
     assert set(stored["doc"]["architecture_ids"]) == {arch_own, arch_sol, arch_new}
 
 
-def test_delete_architecture_pulls_from_apps(client, mock_db):
+def test_delete_architecture_pulls_from_apps(client, mock_db, admin_headers):
     arch_id = ObjectId("60b8d5a1b55a8b0c848b4568")
     mock_db.architectures.delete_one = AsyncMock(
         return_value=type("R", (object,), {"deleted_count": 1})()
@@ -1092,7 +1094,8 @@ def test_delete_architecture_pulls_from_apps(client, mock_db):
     mock_db.solutions.update_many = AsyncMock()
     mock_db.apps.update_many = AsyncMock()
 
-    res = client.delete(f"/api/architectures/{arch_id}")
+    res = client.delete(f"/api/architectures/{arch_id}",
+        headers=admin_headers)
     assert res.status_code == 200
     mock_db.apps.update_many.assert_awaited()
     call = mock_db.apps.update_many.await_args
@@ -1101,7 +1104,7 @@ def test_delete_architecture_pulls_from_apps(client, mock_db):
     assert call.args[1] == {"$pull": {"architecture_ids": arch_id}}
 
 
-def test_delete_infrastructure_pulls_from_apps(client, mock_db):
+def test_delete_infrastructure_pulls_from_apps(client, mock_db, admin_headers):
     infra_id = ObjectId("60b8d5a1b55a8b0c848b4569")
     mock_db.infrastructures.delete_one = AsyncMock(
         return_value=type("R", (object,), {"deleted_count": 1})()
@@ -1109,7 +1112,8 @@ def test_delete_infrastructure_pulls_from_apps(client, mock_db):
     mock_db.solutions.update_many = AsyncMock()
     mock_db.apps.update_many = AsyncMock()
 
-    res = client.delete(f"/api/infrastructures/{infra_id}")
+    res = client.delete(f"/api/infrastructures/{infra_id}",
+        headers=admin_headers)
     assert res.status_code == 200
     mock_db.apps.update_many.assert_awaited()
     call = mock_db.apps.update_many.await_args

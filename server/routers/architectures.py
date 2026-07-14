@@ -1,9 +1,15 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import ArchitectureCreate, ArchitectureResponse, ArchitectureUpdate
+from server.schemas.models import (
+    ArchitectureCreate,
+    ArchitectureResponse,
+    ArchitectureUpdate,
+    Role,
+)
+from server.security.deps import require_role
 from server.services import architectures as service
 
 logger = logging.getLogger(__name__)
@@ -14,6 +20,7 @@ router = APIRouter(prefix="/api/architectures", tags=["Architecture"])
     "/",
     response_model=ArchitectureResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Create a new Architecture design",
     description="Creates a new Architecture card in the database.",
 )
@@ -77,6 +84,7 @@ async def get_architecture(id: str):
 @router.put(
     "/{id}",
     response_model=ArchitectureResponse,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Update an Architecture card",
     description="Updates the title and/or description of an Architecture card.",
 )
@@ -101,6 +109,7 @@ async def update_architecture(id: str, data: ArchitectureUpdate):
 
 @router.delete(
     "/{id}",
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Delete an Architecture card",
     description="Deletes an Architecture card and detaches it from linked Solutions.",
 )

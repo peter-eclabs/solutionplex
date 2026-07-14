@@ -1,9 +1,10 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import AppCreate, AppResponse, AppUpdate
+from server.schemas.models import AppCreate, AppResponse, AppUpdate, Role
+from server.security.deps import require_role
 from server.services import apps as service
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/api/apps", tags=["Apps"])
     "/",
     response_model=AppResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Create a new App card",
     description="Creates a new App card linked to a specific problem.",
 )
@@ -104,6 +106,7 @@ async def get_app(id: str):
 @router.put(
     "/{id}",
     response_model=AppResponse,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Update an App card",
     description="Updates the title, description, URLs, or linked problem of an App card.",
 )
@@ -131,6 +134,7 @@ async def update_app(id: str, data: AppUpdate):
 
 @router.delete(
     "/{id}",
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Delete an App card",
     description="Deletes an App prototype card.",
 )

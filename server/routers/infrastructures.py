@@ -1,9 +1,15 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import InfrastructureCreate, InfrastructureResponse, InfrastructureUpdate
+from server.schemas.models import (
+    InfrastructureCreate,
+    InfrastructureResponse,
+    InfrastructureUpdate,
+    Role,
+)
+from server.security.deps import require_role
 from server.services import infrastructures as service
 
 logger = logging.getLogger(__name__)
@@ -14,6 +20,7 @@ router = APIRouter(prefix="/api/infrastructures", tags=["Infrastructure"])
     "/",
     response_model=InfrastructureResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Create a new Infrastructure stack",
     description="Creates a new Infrastructure card in the database.",
 )
@@ -77,6 +84,7 @@ async def get_infrastructure(id: str):
 @router.put(
     "/{id}",
     response_model=InfrastructureResponse,
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Update an Infrastructure card",
     description="Updates the title and/or description of an Infrastructure card.",
 )
@@ -101,6 +109,7 @@ async def update_infrastructure(id: str, data: InfrastructureUpdate):
 
 @router.delete(
     "/{id}",
+    dependencies=[Depends(require_role(Role.ADMIN))],
     summary="Delete an Infrastructure card",
     description="Deletes an Infrastructure card and detaches it from linked Solutions.",
 )
