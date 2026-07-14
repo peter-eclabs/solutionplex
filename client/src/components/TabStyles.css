@@ -334,18 +334,25 @@
   flex-grow: 1;
 }
 
-.entity-code {
-  display: inline-block;
-  flex-shrink: 0;
-  font-family: var(--font-mono);
+.card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+
+.char-counter {
+  display: block;
+  margin-top: 0.3rem;
   font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted, #8a93a6);
+  text-align: right;
+}
+
+.char-counter.at-limit {
+  color: var(--accent-problem, #ff6b6b);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  color: var(--accent-cyan);
-  background: var(--accent-cyan-dim);
-  border: 1px solid var(--accent-cyan);
 }
 
 .problem-card .entity-code {

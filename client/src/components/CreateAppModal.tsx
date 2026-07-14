@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Solution, Architecture, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
+import { CharCounter } from './CharCounter';
 import './TabStyles.css';
 
 interface CreateAppModalProps {
@@ -192,15 +193,17 @@ export function CreateAppModal({
           <form onSubmit={handleSubmit} className="crud-form">
             <div className="form-field">
               <label htmlFor="app-title">App Name</label>
-              <input
-                id="app-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                placeholder="e.g. Cache Monitor Admin"
-              />
-            </div>
+                <input
+                  id="app-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  maxLength={100}
+                  placeholder="e.g. Cache Monitor Admin"
+                />
+                <CharCounter value={title} max={100} />
+              </div>
             <div className="form-field">
               <label htmlFor="app-desc">Description</label>
               <textarea

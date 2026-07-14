@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Infrastructure } from '../api/client';
 import { DeleteButton } from './DeleteButton';
+import { CardTitle } from './CardTitle';
+import { CharCounter } from './CharCounter';
 import './TabStyles.css';
 
 interface InfrastructureTabProps {
@@ -75,8 +77,10 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    maxLength={100}
                     placeholder="e.g. AWS Elasticache Redis Cluster"
                   />
+                  <CharCounter value={title} max={100} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="infra-desc">Description</label>
@@ -144,7 +148,7 @@ export function InfrastructureTab({ searchQuery, onCardClick }: InfrastructureTa
                 />
                 <div className="card-header">
                   {i.code && <span className="entity-code">{i.code}</span>}
-                  <h4>{i.title}</h4>
+                  <CardTitle title={i.title} />
                 </div>
                 <div className="card-desc card-desc-preview">
                   {previewDescription(i.description)}

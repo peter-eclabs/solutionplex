@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
 import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { CharCounter } from './CharCounter';
 import './TabStyles.css';
 import { CustomSelect } from './CustomSelect';
 import { MultiSelect } from './MultiSelect';
@@ -422,7 +423,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   required
+                  maxLength={100}
                 />
+                <CharCounter value={editTitle} max={100} />
               </div>
 
               <div className="form-field">

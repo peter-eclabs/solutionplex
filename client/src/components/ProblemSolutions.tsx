@@ -4,6 +4,7 @@ import type { Solution, Architecture, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
 import { DeleteButton } from './DeleteButton';
 import { LabelPreview } from './LabelPreview';
+import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
@@ -176,8 +177,10 @@ export function ProblemSolutions({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    maxLength={100}
                     placeholder="e.g. Distributed Redis Session Store"
                   />
+                  <CharCounter value={title} max={100} />
                 </div>
 
                 <div className="form-field">

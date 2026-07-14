@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Problem } from '../api/client';
 import { DeleteButton } from './DeleteButton';
+import { CardTitle } from './CardTitle';
+import { CharCounter } from './CharCounter';
 import { formatCreatedOn } from './formatCreatedOn';
 import './TabStyles.css';
 
@@ -73,8 +75,10 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    maxLength={100}
                     placeholder="e.g. Memory Leak in Session Cache"
                   />
+                  <CharCounter value={title} max={100} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="prob-desc">Description</label>
@@ -143,7 +147,7 @@ export function ProblemsTab({ searchQuery, onCardClick }: ProblemsTabProps) {
 
                 <div className="card-header">
                   {p.code && <span className="entity-code">{p.code}</span>}
-                  <h4>{p.title}</h4>
+                  <CardTitle title={p.title} />
                 </div>
                 <p className="card-created-on">{formatCreatedOn(p.created_at)}</p>
                 {p.solutions.length > 0 ? (

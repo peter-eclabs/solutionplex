@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Architecture } from '../api/client';
 import { DeleteButton } from './DeleteButton';
+import { CardTitle } from './CardTitle';
+import { CharCounter } from './CharCounter';
 import './TabStyles.css';
 
 interface ArchitectureTabProps {
@@ -75,8 +77,10 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    maxLength={100}
                     placeholder="e.g. CQRS with Event Sourcing"
                   />
+                  <CharCounter value={title} max={100} />
                 </div>
                 <div className="form-field">
                   <label htmlFor="arch-desc">Description</label>
@@ -144,7 +148,7 @@ export function ArchitectureTab({ searchQuery, onCardClick }: ArchitectureTabPro
                 />
                 <div className="card-header">
                   {a.code && <span className="entity-code">{a.code}</span>}
-                  <h4>{a.title}</h4>
+                  <CardTitle title={a.title} />
                 </div>
                 <div className="card-desc card-desc-preview">
                   {previewDescription(a.description)}

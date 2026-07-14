@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { AppPrototype } from '../api/client';
 import { CreateAppModal } from './CreateAppModal';
 import { DeleteButton } from './DeleteButton';
+import { CardTitle } from './CardTitle';
 import { LabelPreview } from './LabelPreview';
 import { formatCreatedOn } from './formatCreatedOn';
 import { invalidatePlexCaches } from '../api/queryKeys';
@@ -77,7 +78,7 @@ export function AppsTab({ searchQuery, onCardClick }: AppsTabProps) {
                 />
                 <div className="card-header">
                   {app.code && <span className="entity-code">{app.code}</span>}
-                  <h4>{app.title}</h4>
+                  <CardTitle title={app.title} />
                 </div>
                 <p className="card-created-on">{formatCreatedOn(app.created_at)}</p>
                 <LabelPreview
