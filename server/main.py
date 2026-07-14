@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.database.client import ensure_indexes
 from server.routers import (
+    admin,
     apps,
     architectures,
     auth,
@@ -59,6 +60,7 @@ app.add_middleware(
 
 # Include modular routers
 app.include_router(auth.router)
+app.include_router(admin.router)
 app.include_router(problems.router)
 app.include_router(architectures.router)
 app.include_router(infrastructures.router)
