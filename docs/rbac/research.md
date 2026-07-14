@@ -1,105 +1,122 @@
-# RBAC Research — Solutionplex (FastAPI + React)
+# RBAC Implementation — Research Document
 
 **Date:** July 2026
-**Author:** Researcher Agent (MAW)
-**Audience:** Planner / Backend / Frontend implementation agents
-
-This document consolidates current (2026) best practices for Role-Based Access
-Control and provides copy-pasteable snippets adapted to the existing Solutionplex
-codebase. It covers backend auth libraries, the FastAPI JWT flow, reusable
-role dependencies, the MongoDB user model, the React auth store, protected
-routing on the custom `history.pushState` router, conditional UI, react-query
-header wiring, and a pytest testing strategy.
-
-> **Reading order for implementers:** read §10 (Recommended Stack) for the final
-> library picks, then the per-task sections for the snippets.
+**Scope:** FastAPI backend + React 19 frontend for Solutionplex
+**Status:** Complete — ready for implementation planning
 
 ---
 
-## 1. Backend auth libraries (JWT + password hashing)
+## Recommended Stack (Summary)
 
-### Recommendation
-Use **PyJWT** for JWT and **pwdlib (Argon2)** for password hashing. Both are the
-current choices recommended by the **FastAPI official documentation as of 2026**
-(the docs migrated away from `python-jose` and `passlib`).
+| Layer | Library | Version | Purpose |
+|-------|---------|---------|---------|
+| Backend — JWT | `PyJWT` | `>=2.10` | Token encode/decode (HS256) |
+| Backend — Hashing | `pwdlib[argon2]` | `>=0.2` | Argon2id password hashing |
+| Backend — Auth scheme | `fastapi.security.OAuth2PasswordBearer` | (built-in) | Bearer token extraction |
+| Frontend — JWT decode | *None (native `atob`)* | — | Decode payload client-side |
+| Frontend — Auth state | React Context + `useAuth` hook | — | Token storage, role exposure |
 
-- **JWT — `PyJWT` (`pyjwt`) ≥ 2.13.0.** The de-facto standard (100M+ monthly
-  downloads). In 2.13.0 (May 2026) empty/missing HMAC keys now raise
-  (`InvalidKeyError`), and `algorithms` pinning is enforced — exactly the
-  hardening we want. Always pass `algorithms=["HS256"]` (or `RS256`) at decode
-  time to defeat `alg:none` / algorithm-confusion attacks.
-- **Password hashing — `pwdlib[argon2]` (Argon2id).** Argon2 won the Password
-  Hashing Competition and is the modern default. `pwdlib` is the drop-in
-  replacement for the dead `passlib` that FastAPI now recommends.
+> **No new frontend npm packages required for auth.** The existing `fetch`-based
+> `client.ts` is extended with an `Authorization` header; JWT decoding uses the
+> browser-native `atob` API.
 
-### ⚠️ `passlib` / `bcrypt` pitfalls in 2026 (do NOT use)
-- `passlib` has been **unmaintained since Oct 2020**. The `passlib[bcrypt]`
-  backend **breaks with `bcrypt>=5.0.0`** (released 2025-09-25): even a 10-byte
-  password raises `ValueError: password cannot be longer than 72 bytes`. The root
-  cause is `bcrypt 5.0.0` removing the `__about__` attribute that `passlib` used
-  for backend detection. Pinning `bcrypt==4.3.0` is a band-aid only.
-- If you must stay on bcrypt (not recommended), call `bcrypt.hashpw` /
-  `bcrypt.checkpw` **directly** — do not go through `CryptContext`. But Argon2
-  via `pwdlib` is the cleaner, future-proof choice and avoids the whole bcrypt
-  maintenance mess.
+---
 
-```toml
-# server/pyproject.toml — new dependencies (add to [project].dependencies)
-"pyjwt>=2.13.0",
-"pwdlib[argon2]>=1.1.0",
-"python-multipart>=0.0.20",   # required for OAuth2PasswordRequestForm (login)
+## 1. Backend Auth Libraries
+
+### 1.1 JWT: PyJWT ✅ (recommended)
+
+| Criterion | `PyJWT` | `python-jose` |
+|-----------|---------|---------------|
+| Maintenance | **Active** (regular releases through 2026) | Abandoned since ~2021 |
+| Python 3.13 | Fully compatible | Untested / broken transitive deps |
+| FastAPI docs | **Officially recommended** (tiangolo updated docs mid-2025) | Deprecated from docs |
+| API surface | Simple `jwt.encode()` / `jwt.decode()` | Similar, but dependency on `ecdsa`/`rsa` forks |
+
+**Install** (via `uv`):
+```bash
+uv add pyjwt
 ```
 
+> For RSA/EC algorithms: `uv add "pyjwt[crypto]"`. For Solutionplex MVP, HS256
+> with a shared secret is sufficient.
+
+### 1.2 Password Hashing: pwdlib + Argon2 ✅ (recommended)
+
+| Criterion | `pwdlib[argon2]` | `passlib[bcrypt]` | `argon2-cffi` (direct) |
+|-----------|------------------|-------------------|------------------------|
+| Maintenance | **Active** — modern replacement | **Dead** since 2020 | Active |
+| Python 3.13 | ✅ | ❌ `DeprecationWarning` → breakage | ✅ |
+| FastAPI docs | **Recommended** (official tutorial) | Removed from docs | Supported but lower-level |
+| Algorithm | Argon2id (OWASP gold standard) | bcrypt (72-byte limit) | Argon2id |
+| Ease of use | High (`PasswordHash` wrapper) | Medium (`CryptContext`) | Lower (raw API) |
+
+**Install**:
+```bash
+uv add "pwdlib[argon2]"
+```
+
+**⚠️ Known 2026 Pitfalls:**
+- `passlib` is incompatible with `bcrypt>=4.0` and triggers `DeprecationWarning`
+  under Python 3.13 that will become hard errors in 3.14.
+- `passlib` has no maintainer; do **not** add it to new projects.
+- `pwdlib` intentionally excludes legacy algorithms (MD5, SHA-1) — this is a
+  feature, not a limitation.
+
+#### Code Snippet — `server/auth/password.py`
+
 ```python
-# server/security/passwords.py
-"""Password hashing helpers using pwdlib (Argon2id)."""
-import logging
+"""Password hashing utilities using Argon2id via pwdlib."""
 
 from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
 
-logger = logging.getLogger(__name__)
-
-# Argon2id is the OWASP-recommended default; pwdlib picks sane parameters.
-_pwd = PasswordHash.recommended()
-
-
-def hash_password(password: str) -> str:
-    """Hash a plaintext password; never store the plaintext."""
-    return _pwd.hash(password)
+# Single shared instance — thread-safe, reusable.
+_hasher = PasswordHash((Argon2Hasher(),))
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plaintext password against a stored Argon2 hash."""
-    try:
-        return _pwd.verify(plain_password, hashed_password)
-    except Exception:
-        logger.exception("Password verification failed")
-        return False
+def hash_password(plain: str) -> str:
+    """Hash a plaintext password with Argon2id.
+
+    Args:
+        plain: The plaintext password to hash.
+
+    Returns:
+        The Argon2id hash string.
+    """
+    return _hasher.hash(plain)
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    """Verify a plaintext password against a stored Argon2id hash.
+
+    Args:
+        plain: The plaintext password to verify.
+        hashed: The stored hash to verify against.
+
+    Returns:
+        True if the password matches, False otherwise.
+    """
+    return _hasher.verify(plain, hashed)
 ```
 
 ---
 
-## 2. FastAPI JWT flow
+## 2. FastAPI JWT Flow
 
-### Recommendation
-- Use the **OAuth2 password flow** with `OAuth2PasswordBearer` for the login
-  endpoint. This gives you a free "Authorize" button in `/docs` and automatic
-  `401` when the `Authorization: Bearer` header is missing.
-- Return a plain JSON `{access_token, token_type:"bearer"}` body (the standard
-  shape). For an MVP, a **single short-lived access token** (15–30 min) is
-  acceptable; design the token factory so a refresh token can be added later
-  (rotating, server-side tracked) without rework.
-- Embed `sub` (user id), `email`, and `role` in the payload. Treat all claims as
-  **readable by the client** — never put secrets in the payload.
-- Sign with **HS256** (symmetric) for an MVP single-service app. If multiple
-  services verify tokens later, switch to **RS256** + `aud`/`iss` validation.
-- Always `algorithms=[...]` at decode; PyJWT auto-validates `exp`.
+### 2.1 Token Strategy (MVP)
 
-### Settings additions
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Token style | `OAuth2PasswordBearer` (access token only) | Standard OAuth2 "password" grant; integrates with Swagger `/docs` |
+| Algorithm | HS256 | Simple shared-secret; suitable for single-service MVP |
+| Payload claims | `sub` (user id), `email`, `role`, `exp` | Goal doc §3.2: "JWT MUST embed role" |
+| Expiry | 60 minutes (configurable via `Settings`) | Sufficient for internal tool; no refresh token for MVP |
+| Login response | JSON `{ "access_token": "...", "token_type": "bearer" }` | Standard OAuth2 response shape |
+
+### 2.2 Settings Extension — `server/config.py`
+
 ```python
-# server/config.py
-from datetime import timedelta
-
 from pydantic_settings import BaseSettings
 
 
@@ -107,10 +124,10 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_db: str = "solutionplex"
 
-    # --- Auth (MUST come from environment / .env, never hard-coded) ---
-    jwt_secret: str = "CHANGE_ME_IN_PROD"          # set JWT_SECRET in .env
+    # Auth / JWT
+    jwt_secret_key: str = "CHANGE-ME-IN-PRODUCTION"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    jwt_expire_minutes: int = 60
 
     model_config = {
         "env_file": ".env",
@@ -122,17 +139,21 @@ class Settings(BaseSettings):
 settings = Settings()
 ```
 
-> Add `JWT_SECRET`, `JWT_ALGORITHM` (optional), `ACCESS_TOKEN_EXPIRE_MINUTES`
-> (optional) to `server/.env`. The existing `server/.env` already holds
-> `MONGODB_URL` / `MONGODB_DB`; follow the same pattern. **Never commit `.env`.**
+`.env` additions:
+```
+JWT_SECRET_KEY=your-very-long-random-secret-here
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+```
 
-### Token factory + decoder
+### 2.3 Token Creation — `server/auth/jwt.py`
+
 ```python
-# server/security/jwt.py
-"""JWT creation and verification helpers (PyJWT)."""
+"""JWT token creation and decoding."""
+
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any
 
 import jwt
 
@@ -141,785 +162,1061 @@ from server.config import settings
 logger = logging.getLogger(__name__)
 
 
-def create_access_token(
-    *,
-    subject: str,
-    email: str,
-    role: str,
-    expires_delta: timedelta | None = None,
-) -> str:
-    """Create a signed JWT embedding sub, email, and role claims."""
-    expire = datetime.now(timezone.utc) + (
-        expires_delta
-        or timedelta(minutes=settings.access_token_expire_minutes)
-    )
-    payload: Dict[str, Any] = {
-        "sub": subject,
-        "email": email,
-        "role": role,
-        "exp": expire,
-        "iat": datetime.now(timezone.utc),
-    }
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+def create_access_token(data: dict[str, Any]) -> str:
+    """Create a signed JWT access token.
+
+    Args:
+        data: Claims to embed (must include 'sub', 'email', 'role').
+
+    Returns:
+        Encoded JWT string.
+    """
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str) -> Dict[str, Any]:
-    """Decode and verify a JWT. Raises jwt.InvalidTokenError on any failure."""
+def decode_access_token(token: str) -> dict[str, Any]:
+    """Decode and verify a JWT access token.
+
+    Args:
+        token: The raw JWT string.
+
+    Returns:
+        Decoded payload dict.
+
+    Raises:
+        jwt.ExpiredSignatureError: If the token has expired.
+        jwt.InvalidTokenError: If the token is malformed or the signature is invalid.
+    """
     return jwt.decode(
         token,
-        settings.jwt_secret,
-        algorithms=[settings.jwt_algorithm],   # pin! prevents alg:none attacks
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
     )
 ```
 
-### Login endpoint (OAuth2 password bearer style)
+### 2.4 Login Endpoint — `server/routers/auth.py`
+
 ```python
-# server/routers/auth.py
+"""Authentication endpoints: register + login."""
+
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from server.security.jwt import create_access_token
-from server.security.passwords import verify_password
-from server.services import users as user_service
+from server.auth.jwt import create_access_token
+from server.auth.password import hash_password, verify_password
+from server.database.client import users_col
+from server.schemas.auth import RegisterRequest, TokenResponse, UserResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
-
-
-@router.post("/token", summary="Login and obtain an access token")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = await user_service.get_user_by_email(form_data.username)
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    token = create_access_token(
-        subject=str(user["_id"]),
-        email=user["email"],
-        role=user["role"],
-    )
-    return {"access_token": token, "token_type": "bearer"}
-```
-
-> **Public endpoints** (no guard): `GET /`, `POST /api/auth/register`,
-> `POST /api/auth/token`. Everything else that mutates requires a role.
-
----
-
-## 3. Role-based dependencies (`get_current_user`, `require_role`)
-
-### Recommendation
-Follow the **layered dependency** pattern (2026 best practice):
-1. `oauth2_scheme` extracts the bearer token (auto-`401` if absent).
-2. `get_current_user` decodes the JWT and returns a `CurrentUser` (raises `401`
-   on invalid/expired/missing claims).
-3. `require_role(min_role)` composes `get_current_user` and raises **`403`** when
-   the user's clearance is below `min_role`, **`401`** when unauthenticated.
-
-Use a `Role` `str`-`Enum` with an explicit rank so `Admin` and `SuperAdmin`
-remain distinct values (per `goal.md` §2) while sharing clearance today.
-
-```python
-# server/schemas/models.py — add to the existing models module
-from enum import Enum
-from typing import Optional
-
-from pydantic import BaseModel, Field
-
-
-class Role(str, Enum):
-    READER = "reader"
-    ADMIN = "admin"
-    SUPERADMIN = "superadmin"
-
-
-ROLE_RANK: dict[Role, int] = {
-    Role.READER: 1,
-    Role.ADMIN: 2,
-    Role.SUPERADMIN: 3,
-}
-
-
-class CurrentUser(BaseModel):
-    """Lightweight principal injected by auth dependencies."""
-    id: str
-    email: str
-    role: Role
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-```
-
-```python
-# server/security/deps.py
-"""Reusable FastAPI auth dependencies."""
-import logging
-from typing import Annotated
-
-import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-
-from server.schemas.models import CurrentUser, Role, ROLE_RANK
-from server.security.jwt import decode_token
-
-logger = logging.getLogger(__name__)
-
-# tokenUrl matches the login route declared in server/routers/auth.py
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
-
-_credentials_exc = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-    headers={"WWW-Authenticate": "Bearer"},
-)
-
-
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> CurrentUser:
-    """Decode the JWT and return the authenticated principal.
-
-    Raises 401 on missing/invalid/expired tokens or missing claims.
-    """
-    try:
-        payload = decode_token(token)
-        subject = payload.get("sub")
-        email = payload.get("email")
-        role_raw = payload.get("role")
-        if subject is None or email is None or role_raw is None:
-            raise _credentials_exc
-        role = Role(role_raw)
-    except (jwt.InvalidTokenError, ValueError):
-        raise _credentials_exc
-    return CurrentUser(id=subject, email=email, role=role)
-
-
-def require_role(min_role: Role):
-    """Dependency factory: enforce a minimum clearance level.
-
-    Returns the CurrentUser when cleared; raises 403 when under-cleared
-    and 401 (via get_current_user) when unauthenticated.
-    """
-    def checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-        if ROLE_RANK[current_user.role] < ROLE_RANK[min_role]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient role clearance for this action",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return current_user
-    return checker
-```
-
-> Re-raise `HTTPException` untouched (per AGENTS.md). The `Depends` result cache
-> means `get_current_user` runs once per request even when composed — no extra
-> DB hit.
-
-### Applying the guard to a mutation route
-```python
-# server/routers/architectures.py (excerpt) — gate POST/PUT/DELETE
-from typing import Annotated, List, Optional
-
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from server.schemas.models import (
-    ArchitectureCreate,
-    ArchitectureResponse,
-    ArchitectureUpdate,
-    CurrentUser,
-    Role,
-)
-from server.security.deps import require_role
-from server.services import architectures as service
-
-router = APIRouter(prefix="/api/architectures", tags=["Architecture"])
-
-# Reads stay open to Reader (no dependency). e.g. list_architectures() unchanged.
-
-@router.post(
-    "/",
-    response_model=ArchitectureResponse,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(Role.ADMIN))],
-    summary="Create a new Architecture design",
-)
-async def create_architecture(data: ArchitectureCreate):
-    ...  # body unchanged
-
-
-@router.put(
-    "/{id}",
-    response_model=ArchitectureResponse,
-    dependencies=[Depends(require_role(Role.ADMIN))],
-    summary="Update an Architecture card",
-)
-async def update_architecture(id: str, data: ArchitectureUpdate):
-    ...
-
-
-@router.delete(
-    "/{id}",
-    dependencies=[Depends(require_role(Role.ADMIN))],
-    summary="Delete an Architecture card",
-)
-async def delete_architecture(id: str):
-    ...
-```
-
-> `dependencies=[...]` on the decorator is the cleanest way to enforce a role
-> without changing the handler signature — exactly the pattern in `goal.md` §3.3.
-> Apply the same `require_role(Role.ADMIN)` decorator dependency to all
-> `POST/PUT/DELETE` routes in `problems`, `solutions`, `architectures`,
-> `infrastructures`, `apps`. Reads (`GET`) remain unguarded (Reader-clearable).
-
----
-
-## 4. User model in MongoDB (pydantic v2 + Motor)
-
-### Recommendation
-- Add a `users` collection (Motor via `server/database/client.py`).
-- Store `hashed_password` **never plaintext**. Mandatory `role` field defaulting
-  to `reader`. Unique index on `email`.
-- Use pydantic v2 models; reuse the `PyObjectId` pattern already in
-  `server/schemas/models.py`.
-
-```python
-# server/schemas/models.py — additions
-from datetime import datetime
-
-from server.schemas.models import PyObjectId  # existing alias (defined above)
-
-
-class UserCreate(BaseModel):
-    email: str = Field(..., min_length=3, max_length=255)
-    password: str = Field(..., min_length=8, max_length=128)
-    role: Role = Role.READER   # default per goal.md §3.1
-
-
-class UserInDB(BaseModel):
-    id: PyObjectId = Field(alias="_id", serialization_alias="id")
-    email: str
-    hashed_password: str
-    role: Role = Role.READER
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        arbitrary_types_allowed=True,
-        from_attributes=True,
-    )
-
-
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    role: Role
-    created_at: datetime
-```
-
-```python
-# server/database/client.py — add the collection
-users_col = db["users"]
-
-
-async def ensure_indexes() -> None:
-    """Create unique index on email once at startup."""
-    await users_col.create_index("email", unique=True)
-```
-
-```python
-# server/services/users.py
-import logging
-
-from motor.motor_asyncio import AsyncIOMotorClient
-
-from server.config import settings
-from server.database.client import users_col
-from server.schemas.models import Role, UserCreate, UserInDB
-from server.security.passwords import hash_password
-
-logger = logging.getLogger(__name__)
-
-
-async def create_user(data: UserCreate) -> UserInDB:
-    """Insert a new user with a hashed password; role defaults to reader."""
-    doc = {
-        "email": data.email,
-        "hashed_password": hash_password(data.password),
-        "role": data.role.value,   # Role.READER unless overridden
-    }
-    result = await users_col.insert_one(doc)
-    doc["_id"] = result.inserted_id
-    return UserInDB.model_validate(doc)
-
-
-async def get_user_by_email(email: str) -> dict | None:
-    """Return the raw document (with hashed_password) or None."""
-    return await users_col.find_one({"email": email})
-```
-
-```python
-# server/routers/auth.py — registration (public)
-from server.schemas.models import UserCreate, UserResponse
-from server.services import users as user_service
 
 
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Register a new user (defaults to Reader)",
+    summary="Register a new user",
+    description="Creates a new user with the default 'reader' role.",
 )
-async def register(data: UserCreate):
+async def register(data: RegisterRequest):
+    """Register a new user account."""
     try:
-        user = await user_service.create_user(data)
-        return UserResponse(
-            id=str(user.id),
-            email=user.email,
-            role=user.role,
-            created_at=user.created_at,
-        )
+        existing = await users_col.find_one({"email": data.email})
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered",
+            )
+
+        doc = {
+            "email": data.email,
+            "username": data.username,
+            "hashed_password": hash_password(data.password),
+            "role": "reader",  # Default role per goal doc §3.1
+        }
+        result = await users_col.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+    except HTTPException:
+        raise
     except Exception as e:
-        # E11000 duplicate key -> email already exists
-        logger.exception("Registration failed")
+        logger.exception("Failed to register user")
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Authenticate and obtain JWT",
+    description="Validates credentials and returns a Bearer access token with embedded role.",
+)
+async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    """Authenticate user and return JWT access token."""
+    try:
+        user = await users_col.find_one({"email": form.username})
+        if not user or not verify_password(form.password, user["hashed_password"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        token = create_access_token({
+            "sub": str(user["_id"]),
+            "email": user["email"],
+            "role": user["role"],
+        })
+        return {"access_token": token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Login failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
         ) from e
 ```
 
+> **Note**: `OAuth2PasswordRequestForm` expects `username` + `password` form
+> fields. We use `email` as the username value. This keeps Swagger `/docs` auth
+> working out-of-the-box.
+
 ---
 
-## 5. Frontend auth (React 19 + TypeScript strict)
+## 3. Role-Based Dependencies
 
-### Recommendation
-- **Decode the JWT client-side** with `atob` + `JSON.parse` on the `payload`
-  segment. No secret is needed for decoding (it's just base64). Treat the decoded
-  role as **UI-gating only** — the backend is the source of truth (it re-checks
-  every request).
-- **Token storage trade-off:**
-  - **`localStorage`** (recommended for this MVP): simplest, enables client-side
-    decode + instant role gating, survives refresh. Caveat: vulnerable to XSS.
-    Mitigate by keeping the token short-lived and avoiding `dangerouslySetInnerHTML`
-    / untrusted `marked` rendering of user content.
-  - **`httpOnly` cookie** (more secure, production-grade): immune to XSS token
-    theft, but requires `SameSite=Lax`/`Secure` + CORS `allow_credentials` (already
-    enabled on the backend) and makes client-side decode impossible (cookie is
-    not readable by JS). Use this only if you accept losing in-browser role decode
-    and instead fetch `/api/auth/me`.
-- For an MVP that satisfies `goal.md` §3.2 ("frontend decodes JWT client-side"),
-  **use `localStorage`** and decode the payload. Document the XSS caveat.
+### 3.1 Architecture
 
-### JWT decode helper
+```
+request → OAuth2PasswordBearer (extracts token)
+        → get_current_user (decodes JWT, returns TokenPayload)
+        → require_role(min_role) (checks clearance, returns TokenPayload or 403)
+```
+
+### 3.2 Role Ordering
+
+```python
+# Roles ordered by clearance level (goal doc §2)
+ROLE_RANK: dict[str, int] = {
+    "reader": 0,
+    "admin": 1,
+    "superadmin": 2,
+}
+```
+
+### 3.3 Code — `server/auth/dependencies.py`
+
+```python
+"""Reusable FastAPI auth dependencies for RBAC."""
+
+import logging
+
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+
+from server.auth.jwt import decode_access_token
+from server.schemas.auth import TokenPayload
+
+logger = logging.getLogger(__name__)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+ROLE_RANK: dict[str, int] = {
+    "reader": 0,
+    "admin": 1,
+    "superadmin": 2,
+}
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+) -> TokenPayload:
+    """Decode JWT and return the authenticated user's token payload.
+
+    Raises:
+        HTTPException 401: If the token is missing, expired, or invalid.
+    """
+    try:
+        payload = decode_access_token(token)
+        return TokenPayload(**payload)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+class RequireRole:
+    """Callable dependency that enforces a minimum role clearance.
+
+    Usage in a router:
+        @router.post("/", dependencies=[Depends(RequireRole("admin"))])
+        async def create_thing(...): ...
+
+    Or to also receive the user payload:
+        async def create_thing(user: TokenPayload = Depends(RequireRole("admin"))): ...
+    """
+
+    def __init__(self, min_role: str) -> None:
+        self.min_role = min_role
+
+    async def __call__(
+        self, user: TokenPayload = Depends(get_current_user),
+    ) -> TokenPayload:
+        user_rank = ROLE_RANK.get(user.role, -1)
+        required_rank = ROLE_RANK.get(self.min_role, 999)
+        if user_rank < required_rank:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{user.role}' lacks clearance (requires '{self.min_role}')",
+            )
+        return user
+```
+
+### 3.4 Applying to Existing Routers
+
+The existing routers (e.g. `server/routers/problems.py`) apply guards per-route
+via `dependencies` or `Depends` in the function signature:
+
+```python
+from server.auth.dependencies import RequireRole
+
+# Mutation routes — require Admin or above
+@router.post(
+    "/",
+    response_model=ProblemResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RequireRole("admin"))],
+    summary="Create a new Problem card",
+)
+async def create_problem(data: ProblemCreate):
+    ...
+
+# Read routes — no guard needed (public / reader-accessible)
+@router.get("/", response_model=List[ProblemResponse], summary="List all Problems")
+async def list_problems(q: Optional[str] = None):
+    ...
+```
+
+> **Pattern**: Add `dependencies=[Depends(RequireRole("admin"))]` to every
+> `POST`, `PUT`, and `DELETE` across `problems`, `solutions`, `architectures`,
+> `infrastructures`, and `apps` routers. `GET` routes remain unguarded.
+
+---
+
+## 4. User Model in MongoDB
+
+### 4.1 Pydantic v2 Schemas — `server/schemas/auth.py`
+
+```python
+"""Auth-related pydantic v2 models."""
+
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from server.schemas.models import PyObjectId
+
+
+class Role(str, Enum):
+    """User roles, ordered by clearance level.
+
+    Admin and SuperAdmin share permissions today but are modelled
+    as distinct values for future divergence (goal doc §2).
+    """
+
+    READER = "reader"
+    ADMIN = "admin"
+    SUPERADMIN = "superadmin"
+
+
+class RegisterRequest(BaseModel):
+    """Payload for user registration."""
+
+    email: str = Field(..., min_length=3, max_length=255)
+    username: str = Field(..., min_length=2, max_length=50)
+    password: str = Field(..., min_length=8, max_length=128)
+
+
+class TokenResponse(BaseModel):
+    """OAuth2-style token response."""
+
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenPayload(BaseModel):
+    """Decoded JWT payload used as the 'current user' in dependencies."""
+
+    sub: str
+    email: str
+    role: str
+    exp: Optional[int] = None
+
+
+class UserResponse(BaseModel):
+    """Public-facing user representation (never includes hashed_password)."""
+
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    email: str
+    username: str
+    role: str
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        from_attributes=True,
+    )
+```
+
+> **Note**: `EmailStr` requires `email-validator` (`uv add email-validator`).
+> For MVP simplicity, a plain `str` with `min_length` validation is acceptable
+> and avoids the extra dependency. The snippet above uses `str` for that reason.
+
+### 4.2 MongoDB Collection + Index
+
+In `server/database/client.py`, add:
+
+```python
+users_col = db["users"]
+```
+
+At startup (or via a migration script), create a unique index on `email`:
+
+```python
+await users_col.create_index("email", unique=True)
+```
+
+### 4.3 Document Shape in MongoDB
+
+```json
+{
+  "_id": ObjectId("..."),
+  "email": "admin@solutionplex.io",
+  "username": "Admin",
+  "hashed_password": "$argon2id$v=19$m=65536,t=3,p=1$...",
+  "role": "admin",
+  "created_at": ISODate("2026-07-14T00:00:00Z")
+}
+```
+
+> **Security**: `hashed_password` is **never** returned via any API response.
+> The `UserResponse` model deliberately omits it.
+
+---
+
+## 5. Frontend Auth
+
+### 5.1 Token Storage Decision
+
+| Approach | Security | Complexity | Suitability for Solutionplex |
+|----------|----------|------------|------------------------------|
+| `localStorage` | Vulnerable to XSS; tokens readable by any JS | Low | ✅ **Acceptable for internal MVP** |
+| `HttpOnly cookie` | Immune to XSS; requires CSRF protection + backend cookie handling | High | Overkill for internal tool |
+| In-memory + refresh token | Most secure; cleared on tab close | High | Future upgrade path |
+
+**Recommendation for MVP**: Use `localStorage`. Solutionplex is an **internal**
+knowledge base (not a public SaaS). The simplicity of `localStorage` keeps the
+MVP lean. Document a future migration to `HttpOnly` cookies post-MVP.
+
+### 5.2 JWT Decode (Zero Dependencies)
+
+Decode the JWT payload client-side using the native `atob` API. No npm package
+needed. This is for **UI gating only** — the server always re-validates.
+
 ```typescript
-// client/src/auth/jwt.ts
+// client/src/auth/jwtDecode.ts
+
 export interface JwtPayload {
   sub: string;
   email: string;
   role: 'reader' | 'admin' | 'superadmin';
   exp: number;
-  iat: number;
 }
 
-/** Decode (NOT verify) a JWT payload. Safe for UI gating only. */
-export function decodeJwt(token: string): JwtPayload | null {
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
+/**
+ * Decode a JWT payload without signature verification.
+ * Safe for UI display / gating; the server validates on every request.
+ */
+export function decodeJwtPayload(token: string): JwtPayload | null {
   try {
-    const payload = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(payload) as JwtPayload;
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      '='
+    );
+
+    const json = decodeURIComponent(
+      window
+        .atob(padded)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+
+    return JSON.parse(json) as JwtPayload;
   } catch {
     return null;
   }
 }
 
-export function isExpired(payload: JwtPayload): boolean {
-  return payload.exp * 1000 < Date.now();
+/**
+ * Check whether a decoded token's `exp` claim is in the past.
+ */
+export function isTokenExpired(payload: JwtPayload): boolean {
+  return Date.now() >= payload.exp * 1000;
 }
 ```
 
-### Auth context + hooks (`useAuth`, `useRole`)
-```typescript
+### 5.3 Auth Context + Hooks — `client/src/auth/AuthContext.tsx`
+
+```tsx
 // client/src/auth/AuthContext.tsx
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { decodeJwt, isExpired, type JwtPayload } from './jwt';
 
-const TOKEN_KEY = 'solutionplex_token';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type { ReactNode } from 'react';
+import { decodeJwtPayload, isTokenExpired } from './jwtDecode';
+import type { JwtPayload } from './jwtDecode';
 
-interface AuthState {
-  token: string | null;
-  user: JwtPayload | null;
-  login: (token: string) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
+const TOKEN_KEY = 'sp_access_token';
+
+type UserRole = 'reader' | 'admin' | 'superadmin';
+
+interface AuthUser {
+  id: string;
+  email: string;
+  role: UserRole;
 }
 
-const AuthContext = createContext<AuthState | null>(null);
+interface AuthContextValue {
+  /** The current user, or null if not logged in. */
+  user: AuthUser | null;
+  /** The raw JWT string, or null. */
+  token: string | null;
+  /** True while hydrating from localStorage on mount. */
+  isLoading: boolean;
+  /** Persist a new token (after login). */
+  login: (token: string) => void;
+  /** Clear token and user state. */
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const user = useMemo<JwtPayload | null>(() => {
-    if (!token) return null;
-    const decoded = decodeJwt(token);
-    if (!decoded || isExpired(decoded)) return null;
-    return decoded;
-  }, [token]);
-
+  // Hydrate from localStorage on mount
   useEffect(() => {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  }, [token]);
+    const stored = localStorage.getItem(TOKEN_KEY);
+    if (stored) {
+      const payload = decodeJwtPayload(stored);
+      if (payload && !isTokenExpired(payload)) {
+        setToken(stored);
+        setUser({ id: payload.sub, email: payload.email, role: payload.role });
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
-  const login = (newToken: string) => setToken(newToken);
-  const logout = () => setToken(null);
+  const login = useCallback((newToken: string) => {
+    const payload = decodeJwtPayload(newToken);
+    if (!payload) throw new Error('Invalid token');
+    localStorage.setItem(TOKEN_KEY, newToken);
+    setToken(newToken);
+    setUser({ id: payload.sub, email: payload.email, role: payload.role });
+  }, []);
 
-  const value = useMemo<AuthState>(
-    () => ({ token, user, login, logout, isAuthenticated: user !== null }),
-    [token, user],
+  const logout = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, token, isLoading, login, logout }),
+    [user, token, isLoading, login, logout]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
-  return ctx;
-}
-
-const ROLE_RANK: Record<string, number> = { reader: 1, admin: 2, superadmin: 3 };
-
-export function useRole() {
-  const { user } = useAuth();
-  const role = user?.role ?? 'reader';
-  return {
-    role,
-    canWrite: (ROLE_RANK[role] ?? 0) >= ROLE_RANK['admin'],
-    canManage: (ROLE_RANK[role] ?? 0) >= ROLE_RANK['superadmin'],
-    isReader: role === 'reader',
-  };
-}
-
-// Add this near the top of App.tsx (inside <ToastProvider>):
-//   <AuthProvider> ... </AuthProvider>
-```
-
----
-
-## 6. Protected routes without react-router
-
-### Recommendation
-The app uses a custom `history.pushState` router in `App.tsx` (`navigate`,
-`parseRoute`, `currentPath` state). There is no route guard library, so we add a
-small guard helper that **checks the decoded role before navigating** and
-**redirects to `/unauthorized`** when clearance is insufficient. This composes
-with the existing `navigate()` function.
-
-```typescript
-// client/src/auth/guards.tsx
-import type { ReactNode } from 'react';
-import { useAuth } from './AuthContext';
-import { useRole } from './AuthContext';
-
-type RoleName = 'reader' | 'admin' | 'superadmin';
-
-const ROLE_RANK: Record<RoleName, number> = { reader: 1, admin: 2, superadmin: 3 };
-
-/** Guard a click/navigation: only proceed if the current role clears minRole. */
-export function canNavigate(minRole: RoleName): boolean {
-  const { user } = useAuth();
-  const role = (user?.role ?? 'reader') as RoleName;
-  return (ROLE_RANK[role] ?? 0) >= ROLE_RANK[minRole];
+  return <AuthContext value={value}>{children}</AuthContext>;
 }
 
 /**
- * Wraps mutation UI. Renders nothing (or a fallback) when the user lacks
- * clearance — instead of navigating to a forbidden create/edit view.
+ * Access the auth context. Must be used within <AuthProvider>.
  */
-export function RequireRole({
-  minRole,
-  onDenied,
-  children,
-}: {
-  minRole: RoleName;
-  onDenied?: () => void;
-  children: ReactNode;
-}) {
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  return ctx;
+}
+```
+
+### 5.4 `useRole` Hook — `client/src/auth/useRole.ts`
+
+```typescript
+// client/src/auth/useRole.ts
+
+import { useMemo } from 'react';
+import { useAuth } from './AuthContext';
+
+type UserRole = 'reader' | 'admin' | 'superadmin';
+
+const ROLE_RANK: Record<UserRole, number> = {
+  reader: 0,
+  admin: 1,
+  superadmin: 2,
+};
+
+interface RoleInfo {
+  /** The user's current role, or null if unauthenticated. */
+  role: UserRole | null;
+  /** True if the user can perform write operations (Admin+). */
+  canWrite: boolean;
+  /** True if the user has SuperAdmin clearance. */
+  isSuperAdmin: boolean;
+  /** Check if the user meets a minimum role requirement. */
+  hasRole: (minRole: UserRole) => boolean;
+}
+
+/**
+ * Provides role-aware helpers derived from the current auth state.
+ */
+export function useRole(): RoleInfo {
   const { user } = useAuth();
-  const role = (user?.role ?? 'reader') as RoleName;
-  if ((ROLE_RANK[role] ?? 0) >= ROLE_RANK[minRole]) return <>{children}</>;
+
+  return useMemo(() => {
+    const role = user?.role ?? null;
+    const rank = role ? ROLE_RANK[role] : -1;
+
+    return {
+      role,
+      canWrite: rank >= ROLE_RANK.admin,
+      isSuperAdmin: rank >= ROLE_RANK.superadmin,
+      hasRole: (minRole: UserRole) => rank >= ROLE_RANK[minRole],
+    };
+  }, [user]);
+}
+```
+
+---
+
+## 6. Protected Routes Without react-router
+
+Solutionplex uses a custom `history.pushState` router in `App.tsx` with
+`parseRoute()` and a `navigate()` helper. There is **no** `react-router`.
+
+### 6.1 `RequireAuth` Wrapper
+
+A component that wraps the entire authenticated app shell. If the user is not
+logged in, it renders the Login page instead.
+
+```tsx
+// client/src/auth/RequireAuth.tsx
+
+import type { ReactNode } from 'react';
+import { useAuth } from './AuthContext';
+import { LoginPage } from '../components/LoginPage';
+
+interface RequireAuthProps {
+  children: ReactNode;
+}
+
+/**
+ * Wraps the app shell. Shows <LoginPage /> when unauthenticated.
+ */
+export function RequireAuth({ children }: RequireAuthProps) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="loading-screen">Loading…</div>;
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+### 6.2 `RequireRole` Guard
+
+For route-level protection (e.g., future admin-only pages), a guard component
+that redirects to an Unauthorized page when the role is insufficient:
+
+```tsx
+// client/src/auth/RequireRole.tsx
+
+import type { ReactNode } from 'react';
+import { useRole } from './useRole';
+
+type UserRole = 'reader' | 'admin' | 'superadmin';
+
+interface RequireRoleProps {
+  minRole: UserRole;
+  children: ReactNode;
+  /** What to render when role is insufficient. Defaults to Unauthorized message. */
+  fallback?: ReactNode;
+}
+
+/**
+ * Guard that only renders children if the current user meets the minimum role.
+ * Compatible with the custom pushState router — no react-router dependency.
+ */
+export function RequireRole({ minRole, children, fallback }: RequireRoleProps) {
+  const { hasRole } = useRole();
+
+  if (!hasRole(minRole)) {
+    return fallback ?? (
+      <div className="unauthorized-page">
+        <h2>Unauthorized</h2>
+        <p>You do not have permission to view this page.</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+```
+
+### 6.3 Integration with `App.tsx`
+
+```tsx
+// In App.tsx — wrap the app body
+import { AuthProvider } from './auth/AuthContext';
+import { RequireAuth } from './auth/RequireAuth';
+
+export function App() {
+  // ... existing state ...
+
   return (
-    <button type="button" onClick={() => onDenied?.()}>
-      Access denied
-    </button>
+    <AuthProvider>
+      <RequireAuth>
+        <ToastProvider>
+          <div className="app-container">
+            {/* existing header, tabs, main content */}
+          </div>
+        </ToastProvider>
+      </RequireAuth>
+    </AuthProvider>
   );
 }
 ```
 
-### Wire into `App.tsx`
-```tsx
-// Inside App(): add an /unauthorized route to parseRoute-aware navigation.
-const navigateGuarded = (to: string, minRole: RoleName = 'admin') => {
-  if (canNavigate(minRole)) navigate(to);
-  else navigate('/unauthorized');
-};
-
-// In the main-content switch, add an unauthorized view:
-//   {currentPath === '/unauthorized' ? (
-//     <UnauthorizedView onNavigate={navigate} />
-//   ) : routeInfo ? ( ... ) : ( ... )}
-
-// tab components receive navigateGuarded so "Create" buttons call it:
-//   <ProblemsTab
-//     searchQuery={searchQuery}
-//     onCardClick={(id) => navigate(`/problems/${id}`)}
-//     onNavigate={navigateGuarded}
-//   />
-```
-
-> This preserves the existing `parseRoute`/tab structure — we only add an
-> `/unauthorized` destination and a guarded navigation helper. No router library
-> is introduced, keeping the frontend consistent with `AGENTS.md` / `goal.md` §4.4.
+> Since all tabs require at least `Reader` access, `RequireAuth` acts as the
+> top-level gate. Individual `RequireRole` guards are used for future admin-only
+> pages (e.g. user management). Mutation UI is handled via conditional rendering
+> (§7 below).
 
 ---
 
-## 7. Conditional UI (hide/disable Create/Edit/Delete)
+## 7. Conditional UI (Hide/Disable by Role)
 
-### Recommendation
-Expose a tiny `<Can action="write">` helper (or rely on `useRole().canWrite`)
-and gate the existing mutation controls in tab components, `DetailView.tsx`,
-`CreateAppModal.tsx`, and `DeleteButton.tsx`. This satisfies `goal.md` §4.2.
+### 7.1 Recommendation
 
-```typescript
+For Solutionplex MVP, **hide** mutation controls entirely for `Reader` rather
+than disabling them. Rationale:
+- Readers should not be distracted by actions they cannot perform.
+- The app is internal — discoverability of hidden features is not a UX concern.
+- Disabled buttons with no tooltip explanation cause frustration.
+
+### 7.2 `<Can>` Helper Component
+
+```tsx
 // client/src/auth/Can.tsx
-import type { ReactNode } from 'react';
-import { useRole } from './AuthContext';
 
-/** Renders children only if the current role can perform `action`. */
-export function Can({
-  action,
-  children,
-}: {
-  action: 'read' | 'write' | 'manage';
+import type { ReactNode } from 'react';
+import { useRole } from './useRole';
+
+type UserRole = 'reader' | 'admin' | 'superadmin';
+
+interface CanProps {
+  /** Minimum role required to see children. Defaults to 'admin'. */
+  minRole?: UserRole;
   children: ReactNode;
-}) {
-  const { canWrite, canManage } = useRole();
-  const allowed = action === 'read' ? true : action === 'write' ? canWrite : canManage;
-  return allowed ? <>{children}</> : null;
+}
+
+/**
+ * Declarative role gate. Renders children only if the current user
+ * meets the minimum role clearance.
+ *
+ * @example
+ * <Can>
+ *   <button onClick={handleDelete}>Delete</button>
+ * </Can>
+ *
+ * <Can minRole="superadmin">
+ *   <AdminPanel />
+ * </Can>
+ */
+export function Can({ minRole = 'admin', children }: CanProps) {
+  const { hasRole } = useRole();
+  if (!hasRole(minRole)) return null;
+  return <>{children}</>;
 }
 ```
 
-Usage in any tab component (e.g. `ProblemsTab`):
+### 7.3 Usage in Existing Components
+
 ```tsx
-<Can action="write">
-  <button type="button" onClick={() => onNavigate('/problems/new', 'admin')}>
+// In ProblemsTab.tsx or DetailView.tsx
+import { Can } from '../auth/Can';
+
+// Hide the Create button for Readers
+<Can>
+  <button className="create-btn" onClick={openCreateModal}>
     + New Problem
   </button>
 </Can>
+
+// Hide Delete button for Readers
+<Can>
+  <DeleteButton onDelete={() => handleDelete(id)} />
+</Can>
+
+// Future: SuperAdmin-only controls
+<Can minRole="superadmin">
+  <UserManagementPanel />
+</Can>
 ```
-Or disable instead of hide (keyboard/AT friendly):
+
+### 7.4 Imperative Alternative
+
+For inline conditional logic (e.g. inside `map` callbacks), use the hook
+directly:
+
 ```tsx
 const { canWrite } = useRole();
-<button type="button" disabled={!canWrite} onClick={openCreate}>
-  + New Problem
-</button>
+
+return (
+  <div className="card-actions">
+    {canWrite && <button onClick={handleEdit}>Edit</button>}
+    {canWrite && <button onClick={handleDelete}>Delete</button>}
+  </div>
+);
 ```
 
 ---
 
-## 8. @tanstack/react-query — attach `Authorization` header
+## 8. @tanstack/react-query — Auth Header Integration
 
-### Recommendation
-Centralize the bearer header in the API client's `request` helper. Read the token
-from the auth store (`localStorage`) so every query/mutation is authenticated.
-On logout, clear the token and **invalidate all queries** so cached data is
-refetched (or dropped) for the next user.
+### 8.1 Modify the API Client
+
+The existing `client/src/api/client.ts` uses a `request<T>()` wrapper around
+`fetch`. The cleanest approach is to inject the `Authorization` header there:
 
 ```typescript
-// client/src/api/client.ts — patch the `request` helper
-const TOKEN_KEY = 'solutionplex_token';
+// client/src/api/client.ts — modified request() function
+
+const TOKEN_KEY = 'sp_access_token';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options?.headers || {}),
-    },
+    headers,
   });
+
+  if (response.status === 401) {
+    // Token expired or invalid — clear and redirect to login
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+    throw new Error('Session expired');
+  }
+
   if (!response.ok) {
     const errorMsg = await response.text();
     throw new Error(errorMsg || `API request failed with status ${response.status}`);
   }
+
   try {
-    return (await response.json()) as T;
+    const data: T = await response.json();
+    return data;
   } catch {
     throw new Error('Server returned a non-JSON response. Is the API server running?');
   }
 }
 ```
 
-```typescript
-// On logout (e.g. in a LogoutButton or after 401):
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../auth/AuthContext';
+### 8.2 Cache Invalidation on Logout
 
-function useLogout() {
-  const { logout } = useAuth();
-  const queryClient = useQueryClient();
-  return () => {
-    logout();                       // clears token from localStorage + state
-    queryClient.invalidateQueries(); // drop cached entity data
-  };
-}
+When the user logs out, wipe the entire react-query cache to prevent stale
+data from leaking to the next session:
+
+```typescript
+// In your logout handler (AuthContext or a top-level component)
+import { useQueryClient } from '@tanstack/react-query';
+
+const queryClient = useQueryClient();
+
+const handleLogout = () => {
+  logout();                 // AuthContext.logout() — clears localStorage + state
+  queryClient.clear();      // Wipes ALL cached queries
+};
 ```
 
-> The `api` object's existing method signatures don't change — the header is
-> added transparently. Reads by `Reader` simply include a valid token; the
-> backend allows them.
+> **Why `clear()` not `invalidateQueries()`?**
+> `invalidateQueries()` marks data as stale and triggers a refetch — which would
+> fail with 401 since the token is gone. `clear()` removes all data immediately.
+
+### 8.3 Add Auth API Methods
+
+```typescript
+// Append to client/src/api/client.ts
+
+export const authApi = {
+  login: (email: string, password: string) => {
+    const formData = new URLSearchParams();
+    formData.append('username', email);   // OAuth2 form expects 'username'
+    formData.append('password', password);
+
+    return fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Login failed');
+      }
+      return res.json() as Promise<{ access_token: string; token_type: string }>;
+    });
+  },
+
+  register: (email: string, username: string, password: string) =>
+    request<{ id: string; email: string; username: string; role: string }>(
+      '/api/auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, username, password }),
+      }
+    ),
+};
+```
 
 ---
 
-## 9. Testing (pytest + pytest-asyncio)
+## 9. Testing
 
-### Recommendation
-- Use `fastapi.testclient.TestClient` (or `httpx.ASGITransport` + `AsyncClient`)
-  with `app` from `server.main`.
-- Mock the MongoDB layer by monkeypatching `server.database.client.users_col`
-  (and the entity collections) with an in-memory fake, or use `monkeypatch` on the
-  `user_service` functions. Keep tests deterministic and offline.
-- Test the **guard matrix** per endpoint: anonymous → `401`, `Reader` → `403`,
-  `Admin` → `200`.
-- Use `freezegun` (or `monkeypatch` on `datetime`) to assert expired-token →
-  `401`.
+### 9.1 Tooling
+
+| Tool | Purpose |
+|------|---------|
+| `pytest` + `pytest-asyncio` | Async test execution |
+| `httpx.AsyncClient` + `ASGITransport` | Test FastAPI app without real server |
+| `app.dependency_overrides` | Mock `get_current_user` / MongoDB |
+| `unittest.mock.patch` | Mock `datetime` for token expiry tests |
+
+### 9.2 Fixtures — `server/tests/conftest.py`
 
 ```python
-# server/tests/test_rbac_guards.py
-import logging
-from typing import AsyncGenerator
+"""Shared test fixtures for auth testing."""
 
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
+from server.auth.dependencies import get_current_user
+from server.auth.jwt import create_access_token
 from server.main import app
-from server.security.jwt import create_access_token
+from server.schemas.auth import TokenPayload
 
-logger = logging.getLogger(__name__)
+
+def make_token(role: str = "reader", sub: str = "test-user-id") -> str:
+    """Create a test JWT with the given role."""
+    return create_access_token({"sub": sub, "email": "test@example.com", "role": role})
+
+
+def make_user_override(role: str = "reader"):
+    """Return an async dependency override for get_current_user."""
+    async def _override():
+        return TokenPayload(sub="test-user-id", email="test@example.com", role=role)
+    return _override
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+async def client():
+    """Async HTTP client for testing FastAPI routes."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
 
 
-def _token(role: str, subject: str = "64f3b8c2e4b0c5a1d2e3f400") -> str:
-    return create_access_token(subject=subject, email="u@example.com", role=role)
+@pytest.fixture
+def override_reader():
+    """Override auth to simulate a Reader user."""
+    app.dependency_overrides[get_current_user] = make_user_override("reader")
+    yield
+    app.dependency_overrides.clear()
 
 
-def test_create_architecture_requires_auth(client: TestClient) -> None:
-    resp = client.post("/api/architectures/", json={"title": "x", "description": "y"})
-    assert resp.status_code == 401
+@pytest.fixture
+def override_admin():
+    """Override auth to simulate an Admin user."""
+    app.dependency_overrides[get_current_user] = make_user_override("admin")
+    yield
+    app.dependency_overrides.clear()
 
 
-def test_create_architecture_reader_forbidden(client: TestClient) -> None:
-    headers = {"Authorization": f"Bearer {_token('reader')}"}
-    resp = client.post(
-        "/api/architectures/", json={"title": "x", "description": "y"}, headers=headers
-    )
-    assert resp.status_code == 403
-
-
-def test_create_architecture_admin_ok(client: TestClient) -> None:
-    headers = {"Authorization": f"Bearer {_token('admin')}"}
-    resp = client.post(
-        "/api/architectures/", json={"title": "x", "description": "y"}, headers=headers
-    )
-    # 201 if DB layer mocked; here we only assert the guard passed (not 401/403)
-    assert resp.status_code in (201, 500)
-
-
-def test_expired_token_rejected(client: TestClient) -> None:
-    from datetime import timedelta
-
-    expired = create_access_token(
-        subject="s", email="e@x.com", role="admin", expires_delta=timedelta(minutes=-5)
-    )
-    resp = client.post(
-        "/api/architectures/",
-        json={"title": "x", "description": "y"},
-        headers={"Authorization": f"Bearer {expired}"},
-    )
-    assert resp.status_code == 401
+@pytest.fixture
+def no_auth():
+    """Clear any auth overrides (unauthenticated requests)."""
+    app.dependency_overrides.pop(get_current_user, None)
+    yield
+    app.dependency_overrides.clear()
 ```
 
-> `pytest-asyncio` is already in `server/pyproject.toml` dev deps. Mark async
-> tests with `@pytest.mark.asyncio`. For DB mocking, patch
-> `server.services.architectures.create_architecture` etc. via `monkeypatch`.
+### 9.3 Route Guard Tests — `server/tests/test_auth_guards.py`
+
+```python
+"""Tests for RBAC route guards (401 / 403 behavior)."""
+
+import pytest
+
+pytestmark = pytest.mark.asyncio
+
+
+async def test_create_problem_unauthenticated_returns_401(client, no_auth):
+    """Unauthenticated POST to a protected route must return 401."""
+    response = await client.post(
+        "/api/problems/",
+        json={"title": "Test", "description": "Test desc"},
+    )
+    assert response.status_code == 401
+
+
+async def test_create_problem_reader_returns_403(client, override_reader):
+    """Reader attempting a mutation must receive 403."""
+    response = await client.post(
+        "/api/problems/",
+        json={"title": "Test", "description": "Test desc"},
+    )
+    assert response.status_code == 403
+
+
+async def test_create_problem_admin_succeeds(client, override_admin):
+    """Admin should be allowed to create resources."""
+    # Note: This test also needs a MongoDB mock/override for the service layer.
+    # Shown here to demonstrate the auth guard passes; full integration
+    # tests would mock the database.
+    response = await client.post(
+        "/api/problems/",
+        json={"title": "Test", "description": "Test desc"},
+    )
+    # 201 (success) or 500 (DB not mocked) — but NOT 401/403
+    assert response.status_code != 401
+    assert response.status_code != 403
+
+
+async def test_list_problems_reader_succeeds(client, override_reader):
+    """Readers must be able to access GET (list) routes."""
+    response = await client.get("/api/problems/")
+    assert response.status_code != 401
+    assert response.status_code != 403
+```
+
+### 9.4 Token Expiry Testing
+
+Use `unittest.mock.patch` to freeze time and test expired tokens:
+
+```python
+"""Tests for JWT expiry handling."""
+
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
+
+import pytest
+
+from server.auth.jwt import create_access_token, decode_access_token
+
+pytestmark = pytest.mark.asyncio
+
+
+def test_expired_token_raises():
+    """Tokens with exp in the past must raise ExpiredSignatureError."""
+    import jwt as pyjwt
+
+    token = create_access_token({
+        "sub": "user-1",
+        "email": "test@example.com",
+        "role": "reader",
+    })
+
+    # Fast-forward time past expiry
+    future = datetime.now(timezone.utc) + timedelta(hours=2)
+    with patch("jwt.api_jwt.datetime") as mock_dt:
+        mock_dt.now.return_value = future
+        mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        with pytest.raises(pyjwt.ExpiredSignatureError):
+            decode_access_token(token)
+```
+
+> **Alternative**: Create a token with a negative TTL directly
+> (e.g. `jwt_expire_minutes=-1` in a test settings override) for a simpler
+> approach that avoids datetime mocking entirely.
 
 ---
 
-## 10. Recommended Stack (libraries to add)
+## Risks & Deviations from AGENTS.md
 
-| Layer | Concern | Library (2026) | Version | Notes |
-|-------|---------|----------------|---------|-------|
-| Backend | JWT encode/decode | `PyJWT` | ≥ 2.13.0 | FastAPI-official choice; pin `algorithms` |
-| Backend | Password hashing | `pwdlib[argon2]` | ≥ 1.1.0 | Argon2id; replaces dead `passlib` |
-| Backend | OAuth2 form login | `python-multipart` | ≥ 0.0.20 | Required by `OAuth2PasswordRequestForm` |
-| Backend | Token tests | `freezegun` | ≥ 1.5 | Expiry tests (dev) |
-| Frontend | JWT decode | native `atob`/`JSON.parse` | — | No extra dep; or optional `jwt-decode` ≥ 4 |
-| Frontend | State | React context (built-in) | — | `AuthProvider` + `useAuth`/`useRole` |
-| Frontend | Data | `@tanstack/react-query` | (existing) | Header via `request` wrapper |
-
-**Do NOT add:** `python-jose`, `passlib`, `PyJWT<2.13`.
+| Item | Risk / Deviation | Mitigation |
+|------|-------------------|------------|
+| `pydantic EmailStr` | Requires `email-validator` dep | Use plain `str` with `min_length` for MVP |
+| `localStorage` for tokens | Vulnerable to XSS | Acceptable for internal app; document upgrade path to `HttpOnly` cookies |
+| No refresh token (MVP) | 60-min session, then re-login | Sufficient for internal tool; add refresh endpoint post-MVP |
+| `passlib` excluded | Breaks from older FastAPI tutorials | Aligned with 2026 FastAPI docs; `pwdlib` is the official replacement |
+| `python-jose` excluded | Breaks from older FastAPI tutorials | `PyJWT` is now officially recommended |
+| `OAuth2PasswordRequestForm` uses `username` field for email | Minor semantic mismatch | Document in API docs; standard OAuth2 convention |
+| No new frontend npm packages | Atypical (many tutorials add `jwt-decode`) | Native `atob` is zero-dependency and sufficient |
 
 ---
 
-## 11. Risks & Deviations from AGENTS.md / conventions
+## References
 
-1. **`python-multipart`** is a new runtime dependency (needed for
-   `OAuth2PasswordRequestForm`). Acceptable; documented in §10.
-2. **`pwdlib`** is not in `AGENTS.md`'s dependency list (which predates the
-   `passlib`→`pwdlib` migration). This is a justified deviation: `passlib` is
-   unmaintained and broken with current `bcrypt`. Recorded here intentionally.
-3. **`localStorage` for tokens** deviates from the strictest 2026 guidance
-   (httpOnly cookies preferred). We choose `localStorage` to satisfy the
-   client-side role-decode requirement in `goal.md` §3.2 for the MVP, and note
-   the XSS caveat in §5. Switch to httpOnly + `/api/auth/me` if threat model
-   tightens.
-4. **JWT `role` is client-trusted for UI only.** All enforcement happens backend-
-   side via `require_role`; the decoded frontend role never grants access — it
-   only hides buttons. This matches `goal.md` §3.2 intent.
-5. **No refresh tokens in MVP.** Access token TTL = 30 min (configurable).
-   Refresh rotation is designed-for but out of MVP scope (see §2).
-6. **HS256 symmetric signing** for single-service MVP. If a second verifying
-   service appears, migrate to RS256 + `aud`/`iss` validation (per 2026 guidance).
-7. **Secrets:** `JWT_SECRET` added to `server/.env` (not committed). `config.py`
-   keeps a `"CHANGE_ME_IN_PROD"` placeholder default so dev works without a
-   secret but prod fails loudly if unset. Never log the secret.
-8. **Index creation** (`ensure_indexes`) should be called once at startup
-   (e.g. in `main.py` lifespan) — not per request. Add a startup hook when
-   implementing Phase 1.
-
----
-
-## 12. Implementation phases (mirrors `goal.md` §7)
-
-- **Phase 1 — Backend Auth Foundation:** `config.py` secrets, `security/passwords.py`,
-  `security/jwt.py`, `security/deps.py`, `Role` enum + user models, `users_col`,
-  `routers/auth.py` (register/login), `ensure_indexes` startup hook.
-- **Phase 2 — Backend Route Guards:** add `dependencies=[Depends(require_role(Role.ADMIN))]`
-  to all mutation routes; tests from §9.
-- **Phase 3 — Frontend Auth:** `AuthProvider`, `useAuth`/`useRole`, `jwt.ts`, login +
-  register views, `request` header wiring.
-- **Phase 4 — Frontend Protection & Conditional UI:** `RequireRole`/`Can`, hide/disable
-  Create/Edit/Delete, `/unauthorized` redirect, guarded navigation.
+- [FastAPI Security Tutorial (2026)](https://fastapi.tiangolo.com/tutorial/security/)
+- [PyJWT Documentation](https://pyjwt.readthedocs.io/)
+- [pwdlib on PyPI](https://pypi.org/project/pwdlib/)
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [TanStack React Query — Auth Patterns](https://tanstack.com/query/latest)
+- Solutionplex PRD: `docs/foundation/goal.md`
+- Solutionplex RBAC Goal: `docs/rbac/goal.md`
