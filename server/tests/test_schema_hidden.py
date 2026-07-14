@@ -1,3 +1,7 @@
+from datetime import datetime
+
+from bson import ObjectId
+
 from server.schemas.models import (
     AppResponse,
     AppShort,
@@ -10,12 +14,12 @@ from server.schemas.models import (
 
 def test_problem_response_hidden_defaults_false():
     p = ProblemResponse(
-        id="60b8d5a1b55a8b0c848b4501",
+        _id=ObjectId("60b8d5a1b55a8b0c848b4501"),
         title="T",
         description="D",
         solutions=[],
-        created_at="2026-07-08T11:00:00",
-        updated_at="2026-07-08T11:00:00",
+        created_at=datetime(2026, 7, 8, 11, 0, 0),
+        updated_at=datetime(2026, 7, 8, 11, 0, 0),
     )
     assert p.hidden is False
 
@@ -26,27 +30,27 @@ def test_problem_create_accepts_hidden():
 
 
 def test_problem_update_hidden_optional():
-    u = ProblemUpdate(title="T2")
+    u = ProblemUpdate(title="T2", description=None)
     assert u.hidden is None
-    u2 = ProblemUpdate(hidden=True)
+    u2 = ProblemUpdate(hidden=True, title=None, description=None)
     assert u2.hidden is True
 
 
 def test_solution_and_app_response_have_hidden():
     s = SolutionResponse(
-        id="60b8d5a1b55a8b0c848b4601",
+        _id=ObjectId("60b8d5a1b55a8b0c848b4601"),
         title="S",
         description="D",
-        created_at="2026-07-08T11:00:00",
-        updated_at="2026-07-08T11:00:00",
+        created_at=datetime(2026, 7, 8, 11, 0, 0),
+        updated_at=datetime(2026, 7, 8, 11, 0, 0),
     )
     a = AppResponse(
-        id="60b8d5a1b55a8b0c848b4701",
+        _id=ObjectId("60b8d5a1b55a8b0c848b4701"),
         title="A",
         description="D",
         github_url="https://github.com/x/y",
-        created_at="2026-07-08T11:00:00",
-        updated_at="2026-07-08T11:00:00",
+        created_at=datetime(2026, 7, 8, 11, 0, 0),
+        updated_at=datetime(2026, 7, 8, 11, 0, 0),
     )
     assert s.hidden is False
     assert a.hidden is False
