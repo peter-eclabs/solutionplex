@@ -102,6 +102,7 @@ export function AppsTab({ searchQuery, onCardClick, onWriteDenied }: AppsTabProp
                 <p className="card-created-on">{formatCreatedOn(app.created_at)}</p>
                 <LabelPreview
                   architectures={app.architectures ?? []}
+                  technologies={app.technologies ?? []}
                   infrastructures={app.infrastructures ?? []}
                 />
               </article>

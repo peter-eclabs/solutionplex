@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
+import type { Problem, Solution, Architecture, Technology, Infrastructure, AppPrototype } from '../api/client';
 import { ApiError } from '../api/client';
 import { PlexVisualizer } from './PlexVisualizer';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -18,7 +18,7 @@ import { useRole } from '../auth/AuthContext';
 import { Can } from '../auth/Can';
 
 interface DetailViewProps {
-  component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
+  component: 'problems' | 'solutions' | 'architecture' | 'technologies' | 'infrastructure' | 'apps';
   id: string;
   onNavigate: (path: string) => void;
 }
@@ -27,6 +27,7 @@ type DetailPayload =
   | { kind: 'problems'; problemData: Problem; relatedApps: AppPrototype[]; problemSolutions: Solution[] }
   | { kind: 'solutions'; solutionData: Solution }
   | { kind: 'architecture'; archData: Architecture; relatedSolutions: Solution[] }
+  | { kind: 'technologies'; techData: Technology; relatedSolutions: Solution[] }
   | { kind: 'infrastructure'; infraData: Infrastructure; relatedSolutions: Solution[] }
   | { kind: 'apps'; appData: AppPrototype; readme: string };
 
@@ -40,6 +41,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   const [problemData, setProblemData] = useState<Problem | null>(null);
   const [solutionData, setSolutionData] = useState<Solution | null>(null);
   const [archData, setArchData] = useState<Architecture | null>(null);
+  const [techData, setTechData] = useState<Technology | null>(null);
   const [infraData, setInfraData] = useState<Infrastructure | null>(null);
   const [appData, setAppData] = useState<AppPrototype | null>(null);
 
@@ -61,6 +63,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   const [editProblemId, setEditProblemId] = useState('');
   const [editSolutionId, setEditSolutionId] = useState('');
   const [editArchIds, setEditArchIds] = useState<string[]>([]);
+  const [editTechIds, setEditTechIds] = useState<string[]>([]);
   const [editInfraIds, setEditInfraIds] = useState<string[]>([]);
   const [editGithubUrl, setEditGithubUrl] = useState('');
   const [editLiveUrl, setEditLiveUrl] = useState('');
@@ -69,6 +72,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
   const [allProblems, setAllProblems] = useState<Problem[]>([]);
   const [, setAllSolutions] = useState<Solution[]>([]);
   const [allArchs, setAllArchs] = useState<Architecture[]>([]);
+  const [allTechs, setAllTechs] = useState<Technology[]>([]);
   const [allInfras, setAllInfras] = useState<Infrastructure[]>([]);
 
   const { data, isLoading, error: queryError } = useQuery<DetailPayload>({
@@ -101,6 +105,19 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
             relatedSolutions: sols.filter((s) => s.architectures.some((a) => a.id === id)),
           };
         }
+        case 'technologies': {
+          const [techData, sols] = await Promise.all([
+            api.getTechnology(id),
+            api.getSolutions(),
+          ]);
+          return {
+            kind: 'technologies',
+            techData,
+            relatedSolutions: sols.filter((s) =>
+              (s.technologies ?? []).some((t) => t.id === id),
+            ),
+          };
+        }
         case 'infrastructure': {
           const [infraData, sols] = await Promise.all([api.getInfrastructure(id), api.getSolutions()]);
           return {
@@ -130,13 +147,20 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     queryKey: ['detail-lookups'],
     enabled: component === 'solutions' || component === 'apps',
     queryFn: async () => {
-      const [probs, archs, infras, sols] = await Promise.all([
+      const [probs, archs, techs, infras, sols] = await Promise.all([
         api.getProblems(),
         api.getArchitectures(),
+        api.getTechnologies(),
         api.getInfrastructures(),
         api.getSolutions(),
       ]);
-      return { allProblems: probs, allArchs: archs, allInfras: infras, allSolutions: sols };
+      return {
+        allProblems: probs,
+        allArchs: archs,
+        allTechs: techs,
+        allInfras: infras,
+        allSolutions: sols,
+      };
     },
   });
 
@@ -147,6 +171,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     setProblemData(null);
     setSolutionData(null);
     setArchData(null);
+    setTechData(null);
     setInfraData(null);
     setAppData(null);
     setReadme('');
@@ -168,21 +193,30 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       setEditDescription(data.solutionData.description);
       setEditProblemId(data.solutionData.problem?.id || '');
       setEditArchIds(data.solutionData.architectures.map((a) => a.id));
+      setEditTechIds((data.solutionData.technologies || []).map((t) => t.id));
       setEditInfraIds(data.solutionData.infrastructures.map((i) => i.id));
     } else if (data.kind === 'architecture') {
       setArchData(data.archData);
       setEditTitle(data.archData.title);
       setEditDescription(data.archData.description);
+      setRelatedSolutions(data.relatedSolutions);
+    } else if (data.kind === 'technologies') {
+      setTechData(data.techData);
+      setEditTitle(data.techData.title);
+      setEditDescription(data.techData.description);
+      setRelatedSolutions(data.relatedSolutions);
     } else if (data.kind === 'infrastructure') {
       setInfraData(data.infraData);
       setEditTitle(data.infraData.title);
       setEditDescription(data.infraData.description);
+      setRelatedSolutions(data.relatedSolutions);
     } else if (data.kind === 'apps') {
       setAppData(data.appData);
       setEditTitle(data.appData.title);
       setEditDescription(data.appData.description);
       setEditSolutionId(data.appData.solution?.id || '');
       setEditArchIds((data.appData.architectures || []).map((a) => a.id));
+      setEditTechIds((data.appData.technologies || []).map((t) => t.id));
       setEditInfraIds((data.appData.infrastructures || []).map((i) => i.id));
       setEditGithubUrl(data.appData.github_url);
       setEditLiveUrl(data.appData.live_url || '');
@@ -195,6 +229,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     if (!lookups) return;
     setAllProblems(lookups.allProblems);
     setAllArchs(lookups.allArchs);
+    setAllTechs(lookups.allTechs);
     setAllInfras(lookups.allInfras);
     setAllSolutions(lookups.allSolutions);
   }, [lookups]);
@@ -220,10 +255,13 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           description: editDescription.trim(),
           problem_id: editProblemId || undefined,
           architecture_ids: editArchIds,
+          technology_ids: editTechIds,
           infrastructure_ids: editInfraIds,
         });
       } else if (component === 'architecture') {
         return api.updateArchitecture(id, { title: editTitle.trim(), description: editDescription.trim() });
+      } else if (component === 'technologies') {
+        return api.updateTechnology(id, { title: editTitle.trim(), description: editDescription.trim() });
       } else if (component === 'infrastructure') {
         return api.updateInfrastructure(id, { title: editTitle.trim(), description: editDescription.trim() });
       } else {
@@ -234,6 +272,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           github_url: string;
           live_url?: string;
           architecture_ids?: string[];
+          technology_ids?: string[];
           infrastructure_ids?: string[];
         } = {
           title: editTitle.trim(),
@@ -242,9 +281,10 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
           github_url: editGithubUrl.trim(),
           live_url: editLiveUrl.trim() || undefined,
         };
-        // Architecture/infrastructure are always editable and saved explicitly,
-        // letting linked apps override the values inherited from their solution.
+        // Labels always editable and saved explicitly,
+        // letting linked apps override values inherited from their solution.
         appUpdate.architecture_ids = editArchIds;
+        appUpdate.technology_ids = editTechIds;
         appUpdate.infrastructure_ids = editInfraIds;
         return api.updateApp(id, appUpdate);
       }
@@ -272,26 +312,11 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     }
   };
 
-  const handleArchCheckbox = (archId: string, checked: boolean) => {
-    if (checked) {
-      setEditArchIds([...editArchIds, archId]);
-    } else {
-      setEditArchIds(editArchIds.filter((item) => item !== archId));
-    }
-  };
-
-  const handleInfraCheckbox = (infraId: string, checked: boolean) => {
-    if (checked) {
-      setEditInfraIds([...editInfraIds, infraId]);
-    } else {
-      setEditInfraIds(editInfraIds.filter((item) => item !== infraId));
-    }
-  };
-
   const getEntityTitle = () => {
     if (component === 'problems' && problemData) return problemData.title;
     if (component === 'solutions' && solutionData) return solutionData.title;
     if (component === 'architecture' && archData) return archData.title;
+    if (component === 'technologies' && techData) return techData.title;
     if (component === 'infrastructure' && infraData) return infraData.title;
     if (component === 'apps' && appData) return appData.title;
     return 'Entity Details';
@@ -301,16 +326,18 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
     if (component === 'problems' && problemData) return problemData.description;
     if (component === 'solutions' && solutionData) return solutionData.description;
     if (component === 'architecture' && archData) return archData.description;
+    if (component === 'technologies' && techData) return techData.description;
     if (component === 'infrastructure' && infraData) return infraData.description;
     if (component === 'apps' && appData) return appData.description;
     return '';
   };
 
   const getEntityTimestamp = () => {
-    let d: Problem | Solution | Architecture | Infrastructure | AppPrototype | null = null;
+    let d: Problem | Solution | Architecture | Technology | Infrastructure | AppPrototype | null = null;
     if (component === 'problems') d = problemData;
     else if (component === 'solutions') d = solutionData;
     else if (component === 'architecture') d = archData;
+    else if (component === 'technologies') d = techData;
     else if (component === 'infrastructure') d = infraData;
     else if (component === 'apps') d = appData;
     if (!d) return '';
@@ -322,9 +349,17 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       case 'problems': return 'var(--accent-problem)';
       case 'solutions': return 'var(--accent-solution)';
       case 'architecture': return 'var(--accent-arch)';
+      case 'technologies': return 'var(--accent-tech)';
       case 'infrastructure': return 'var(--accent-infra)';
       case 'apps': return 'var(--accent-cyan)';
     }
+  };
+
+  const getComponentBadgeLabel = () => {
+    if (component === 'technologies') return 'TECHNOLOGY';
+    if (component === 'architecture') return 'ARCHITECTURE';
+    if (component === 'infrastructure') return 'INFRASTRUCTURE';
+    return component.slice(0, -1).toUpperCase();
   };
 
   const getBackNavigation = () => {
@@ -343,6 +378,9 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
       }
       if (fromPath.startsWith('/architecture/')) {
         return { label: 'BACK TO ARCHITECTURE', action: () => window.history.back() };
+      }
+      if (fromPath.startsWith('/technologies/')) {
+        return { label: 'BACK TO TECHNOLOGY', action: () => window.history.back() };
       }
       if (fromPath.startsWith('/infrastructure/')) {
         return { label: 'BACK TO INFRASTRUCTURE', action: () => window.history.back() };
@@ -478,34 +516,38 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
 
                   <div className="form-field">
                     <label>Architecture Designs (1:N)</label>
-                    <div className="checkbox-select-list">
-                      {allArchs.map((arch) => (
-                        <label key={arch.id} className="checkbox-item">
-                          <input
-                            type="checkbox"
-                            checked={editArchIds.includes(arch.id)}
-                            onChange={(e) => handleArchCheckbox(arch.id, e.target.checked)}
-                          />
-                          {arch.title}
-                        </label>
-                      ))}
-                    </div>
+                    <MultiSelect
+                      id="sol-arch-edit"
+                      options={allArchs.map((arch) => ({ value: arch.id, label: arch.title }))}
+                      selectedValues={editArchIds}
+                      onChange={setEditArchIds}
+                      placeholder="Search architecture designs…"
+                      emptyText="No architectures available"
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label>Technologies (1:N)</label>
+                    <MultiSelect
+                      id="sol-tech-edit"
+                      options={allTechs.map((tech) => ({ value: tech.id, label: tech.title }))}
+                      selectedValues={editTechIds}
+                      onChange={setEditTechIds}
+                      placeholder="Search technologies…"
+                      emptyText="No technologies available"
+                    />
                   </div>
 
                   <div className="form-field">
                     <label>Infrastructure Stacks (1:N)</label>
-                    <div className="checkbox-select-list">
-                      {allInfras.map((infra) => (
-                        <label key={infra.id} className="checkbox-item">
-                          <input
-                            type="checkbox"
-                            checked={editInfraIds.includes(infra.id)}
-                            onChange={(e) => handleInfraCheckbox(infra.id, e.target.checked)}
-                          />
-                          {infra.title}
-                        </label>
-                      ))}
-                    </div>
+                    <MultiSelect
+                      id="sol-infra-edit"
+                      options={allInfras.map((infra) => ({ value: infra.id, label: infra.title }))}
+                      selectedValues={editInfraIds}
+                      onChange={setEditInfraIds}
+                      placeholder="Search infrastructure stacks…"
+                      emptyText="No infrastructure available"
+                    />
                   </div>
                 </>
               )}
@@ -522,6 +564,18 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                           onChange={setEditArchIds}
                           placeholder="Search architecture designs…"
                           emptyText="No architectures available"
+                        />
+                      </div>
+
+                      <div className="form-field">
+                        <label>Technologies (1:N)</label>
+                        <MultiSelect
+                          id="app-tech-edit"
+                          options={allTechs.map((tech) => ({ value: tech.id, label: tech.title }))}
+                          selectedValues={editTechIds}
+                          onChange={setEditTechIds}
+                          placeholder="Search technologies…"
+                          emptyText="No technologies available"
                         />
                       </div>
 
@@ -564,7 +618,7 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
             <div className="card-viewer-mode">
               <div className="viewer-header">
                 <div className="type-badge" style={{ borderColor: getComponentBadgeColor(), color: getComponentBadgeColor() }}>
-                  {component.slice(0, -1).toUpperCase()}
+                  {getComponentBadgeLabel()}
                 </div>
                 <h2>{getEntityTitle()}</h2>
                 {component === 'problems' && problemData?.hidden && <HiddenBadge />}
@@ -641,6 +695,17 @@ export function DetailView({ component, id, onNavigate }: DetailViewProps) {
                     <PlexVisualizer
                       component="architecture"
                       data={archData}
+                      relatedSolutions={relatedSolutions}
+                      onNavigate={onNavigate}
+                    />
+                  </div>
+                )}
+                {component === 'technologies' && techData && (
+                  <div className="card-visualizer-section">
+                    <h4 className="visualizer-section-title">Plex Visualizer</h4>
+                    <PlexVisualizer
+                      component="technologies"
+                      data={techData}
                       relatedSolutions={relatedSolutions}
                       onNavigate={onNavigate}
                     />

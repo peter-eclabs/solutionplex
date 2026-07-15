@@ -63,6 +63,9 @@ MUTATION_ROUTES = [
     ("POST", "/api/architectures/", {"title": "T", "description": "D"}),
     ("PUT", "/api/architectures/000000000000000000000001", {"title": "T"}),
     ("DELETE", "/api/architectures/000000000000000000000001", None),
+    ("POST", "/api/technologies/", {"title": "T", "description": "D"}),
+    ("PUT", "/api/technologies/000000000000000000000001", {"title": "T"}),
+    ("DELETE", "/api/technologies/000000000000000000000001", None),
     ("POST", "/api/infrastructures/", {"title": "T", "description": "D"}),
     ("PUT", "/api/infrastructures/000000000000000000000001", {"title": "T"}),
     ("DELETE", "/api/infrastructures/000000000000000000000001", None),
@@ -86,6 +89,8 @@ READ_ROUTES = [
     ("GET", "/api/solutions/000000000000000000000001"),
     ("GET", "/api/architectures/"),
     ("GET", "/api/architectures/000000000000000000000001"),
+    ("GET", "/api/technologies/"),
+    ("GET", "/api/technologies/000000000000000000000001"),
     ("GET", "/api/infrastructures/"),
     ("GET", "/api/infrastructures/000000000000000000000001"),
     ("GET", "/api/apps/"),
@@ -217,6 +222,11 @@ class TestAdminPostWithServiceStub:
             (
                 "/api/architectures/",
                 "server.routers.architectures.service.create_architecture",
+                {"title": "T", "description": "D"},
+            ),
+            (
+                "/api/technologies/",
+                "server.routers.technologies.service.create_technology",
                 {"title": "T", "description": "D"},
             ),
             (
@@ -384,6 +394,7 @@ class TestReadRoutesRequireAuth:
             "/api/problems/",
             "/api/solutions/",
             "/api/architectures/",
+            "/api/technologies/",
             "/api/infrastructures/",
             "/api/apps/",
             "/api/search/?q=test&tab=problems",

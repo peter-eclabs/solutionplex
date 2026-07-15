@@ -306,6 +306,9 @@
 .arch-card::before { background-color: var(--accent-arch); }
 .arch-card:hover { border-color: var(--accent-arch); box-shadow: 0 0 15px rgba(139, 92, 246, 0.15); }
 
+.tech-card::before { background-color: var(--accent-tech); }
+.tech-card:hover { border-color: var(--accent-tech); box-shadow: 0 0 15px rgba(20, 184, 166, 0.15); }
+
 .infra-card::before { background-color: var(--accent-infra); }
 .infra-card:hover { border-color: var(--accent-infra); box-shadow: 0 0 15px rgba(245, 158, 11, 0.15); }
 
@@ -382,6 +385,12 @@
   color: var(--accent-arch);
   background: var(--accent-arch-dim);
   border-color: var(--accent-arch);
+}
+
+.tech-card .entity-code {
+  color: var(--accent-tech);
+  background: var(--accent-tech-dim);
+  border-color: var(--accent-tech);
 }
 
 .infra-card .entity-code {
@@ -622,6 +631,19 @@
   color: var(--accent-arch);
 }
 
+.add-card-trigger.btn-tech {
+  border-color: rgba(20, 184, 166, 0.3) !important;
+}
+.add-card-trigger.btn-tech:hover {
+  border-color: var(--accent-tech) !important;
+  background-color: rgba(20, 184, 166, 0.05) !important;
+  box-shadow: 0 0 15px rgba(20, 184, 166, 0.1) !important;
+}
+.add-card-trigger.btn-tech:hover .add-icon,
+.add-card-trigger.btn-tech:hover .add-text {
+  color: var(--accent-tech);
+}
+
 .add-card-trigger.btn-infra {
   border-color: rgba(245, 158, 11, 0.3) !important;
 }
@@ -707,6 +729,17 @@
   background-color: var(--accent-arch);
   color: var(--bg-primary);
   box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+}
+
+.open-form-btn.btn-tech {
+  background-color: var(--accent-tech-dim);
+  border-color: var(--accent-tech);
+  color: var(--accent-tech);
+}
+.open-form-btn.btn-tech:hover {
+  background-color: var(--accent-tech);
+  color: var(--bg-primary);
+  box-shadow: 0 0 15px rgba(20, 184, 166, 0.3);
 }
 
 .open-form-btn.btn-infra {
@@ -1341,6 +1374,15 @@
   box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
 }
 
+.plex-node-card.plex-node-technology {
+  border-color: rgba(20, 184, 166, 0.3);
+}
+.plex-node-card.plex-node-technology:hover,
+.plex-node-card.plex-node-technology.plex-node-parent {
+  border-color: var(--accent-tech);
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.2);
+}
+
 .plex-node-card.plex-node-infrastructure {
   border-color: rgba(245, 158, 11, 0.3);
 }
@@ -1386,6 +1428,11 @@
   box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
+.plex-node-icon-wrapper.bg-technology {
+  background-color: var(--accent-tech);
+  box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
+}
+
 .plex-node-icon-wrapper.bg-infrastructure {
   background-color: var(--accent-infra);
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
@@ -1426,6 +1473,7 @@
 .plex-node-problem .plex-node-label { color: var(--accent-problem); }
 .plex-node-solution .plex-node-label { color: var(--accent-solution); }
 .plex-node-architecture .plex-node-label { color: var(--accent-arch); }
+.plex-node-technology .plex-node-label { color: var(--accent-tech); }
 .plex-node-infrastructure .plex-node-label { color: var(--accent-infra); }
 .plex-node-app .plex-node-label { color: var(--accent-cyan); }
 
@@ -2178,6 +2226,11 @@
 .tag-arch {
   color: var(--accent-arch);
   border-color: var(--accent-arch);
+}
+
+.tag-tech {
+  color: var(--accent-tech);
+  border-color: var(--accent-tech);
 }
 
 .tag-infra {

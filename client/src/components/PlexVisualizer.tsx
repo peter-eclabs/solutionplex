@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Problem, Solution, Architecture, Infrastructure, AppPrototype } from '../api/client';
+import type { Problem, Solution, Architecture, Technology, Infrastructure, AppPrototype } from '../api/client';
 
 interface PlexVisualizerProps {
-  component: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
-  data: Problem | Solution | Architecture | Infrastructure | AppPrototype;
+  component: 'problems' | 'solutions' | 'architecture' | 'technologies' | 'infrastructure' | 'apps';
+  data: Problem | Solution | Architecture | Technology | Infrastructure | AppPrototype;
   relatedSolutions?: Solution[];
   relatedApps?: AppPrototype[];
   onNavigate: (path: string) => void;
@@ -12,7 +12,7 @@ interface PlexVisualizerProps {
 interface NodeData {
   id: string;
   label: string;
-  type: 'problem' | 'solution' | 'architecture' | 'infrastructure' | 'app';
+  type: 'problem' | 'solution' | 'architecture' | 'technology' | 'infrastructure' | 'app';
   x: number;
   y: number;
   icon: string;
@@ -22,7 +22,7 @@ interface NodeData {
 }
 
 interface FloatingPanelState {
-  type: 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
+  type: 'problems' | 'solutions' | 'architecture' | 'technologies' | 'infrastructure' | 'apps';
   title: string;
   items: { id: string; title: string }[];
   x: number;
@@ -54,6 +54,13 @@ function PlexIcon({ type, className = '' }: { type: string; className?: string }
           <circle cx="18" cy="6" r="3" />
           <circle cx="6" cy="18" r="3" />
           <path d="M18 9a9 9 0 0 1-9 9" />
+        </svg>
+      );
+    case 'technology':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
         </svg>
       );
     case 'infrastructure':
@@ -242,7 +249,7 @@ export function PlexVisualizer({
       isParent: true,
     });
 
-    const outerItems: { id: string; label: string; type: 'problem' | 'architecture' | 'infrastructure' | 'app'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    const outerItems: { id: string; label: string; type: 'problem' | 'architecture' | 'technology' | 'infrastructure' | 'app'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
     
     if (solution.problem) {
       outerItems.push({
@@ -274,6 +281,29 @@ export function PlexVisualizer({
         grad: 'grad-sol-arch',
         isCategory: true,
         items: archs.map((a) => ({ id: a.id, title: a.title })),
+      });
+    }
+
+    // Technologies: 1 direct, >1 category node (solution ∪ linked apps)
+    const techs =
+      solution.effective_technologies || solution.technologies || [];
+    if (techs.length === 1) {
+      outerItems.push({
+        id: techs[0].id,
+        label: techs[0].title,
+        type: 'technology',
+        icon: 'technology',
+        grad: 'grad-sol-tech',
+      });
+    } else if (techs.length > 1) {
+      outerItems.push({
+        id: 'cat-technology',
+        label: 'Technologies',
+        type: 'technology',
+        icon: 'technology',
+        grad: 'grad-sol-tech',
+        isCategory: true,
+        items: techs.map((t) => ({ id: t.id, title: t.title })),
       });
     }
 
@@ -413,6 +443,64 @@ export function PlexVisualizer({
         gradId: item.grad,
       });
     });
+  } else if (component === 'technologies') {
+    const tech = data as Technology;
+    nodes.push({
+      id: tech.id,
+      label: tech.title,
+      type: 'technology',
+      x: cx - NODE_WIDTH / 2,
+      y: cy - NODE_HEIGHT / 2,
+      icon: 'technology',
+      isParent: true,
+    });
+
+    const outerItems: { id: string; label: string; type: 'solution'; icon: string; grad: string; isCategory?: boolean; items?: { id: string; title: string }[] }[] = [];
+    const sols = relatedSolutions || [];
+    if (sols.length === 1) {
+      outerItems.push({
+        id: sols[0].id,
+        label: sols[0].title,
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-tech',
+      });
+    } else if (sols.length > 1) {
+      outerItems.push({
+        id: 'cat-solutions',
+        label: 'Solutions',
+        type: 'solution',
+        icon: 'solution',
+        grad: 'grad-sol-tech',
+        isCategory: true,
+        items: sols.map((s) => ({ id: s.id, title: s.title })),
+      });
+    }
+
+    const techRx = Math.max(120, Math.min(cx * 0.55, 220));
+    const techRy = Math.max(70, Math.min(cy * 0.55, 100));
+    outerItems.forEach((item, index) => {
+      const angle = outerItems.length === 1
+        ? Math.PI / 2
+        : (index * 2 * Math.PI) / outerItems.length + Math.PI / 2;
+      const x = cx + techRx * Math.cos(angle) - NODE_WIDTH / 2;
+      const y = cy + techRy * Math.sin(angle) - NODE_HEIGHT / 2;
+      nodes.push({
+        id: item.id,
+        label: item.label,
+        type: item.type,
+        x,
+        y,
+        icon: item.icon,
+        isCategory: item.isCategory,
+        items: item.items,
+      });
+      links.push({
+        sourceId: tech.id,
+        targetId: item.id,
+        gradId: item.grad,
+      });
+    });
   } else if (component === 'infrastructure') {
     const infra = data as Infrastructure;
     // Center: Infrastructure
@@ -493,7 +581,7 @@ export function PlexVisualizer({
     const outerItems: {
       id: string;
       label: string;
-      type: 'problem' | 'solution' | 'architecture' | 'infrastructure';
+      type: 'problem' | 'solution' | 'architecture' | 'technology' | 'infrastructure';
       icon: string;
       grad: string;
       isCategory?: boolean;
@@ -549,6 +637,27 @@ export function PlexVisualizer({
         grad: 'grad-sol-arch',
         isCategory: true,
         items: archs.map((a) => ({ id: a.id, title: a.title })),
+      });
+    }
+
+    const techs = app.technologies || [];
+    if (techs.length === 1) {
+      outerItems.push({
+        id: techs[0].id,
+        label: techs[0].title,
+        type: 'technology',
+        icon: 'technology',
+        grad: 'grad-sol-tech',
+      });
+    } else if (techs.length > 1) {
+      outerItems.push({
+        id: 'cat-technology',
+        label: 'Technologies',
+        type: 'technology',
+        icon: 'technology',
+        grad: 'grad-sol-tech',
+        isCategory: true,
+        items: techs.map((t) => ({ id: t.id, title: t.title })),
       });
     }
 
@@ -626,6 +735,7 @@ export function PlexVisualizer({
         node.type === 'problem' ? 'Related Problems' :
         node.type === 'solution' ? 'Related Solutions' :
         node.type === 'architecture' ? 'Architecture Pattern Stacks' :
+        node.type === 'technology' ? 'Technologies' :
         node.type === 'infrastructure' ? 'Infrastructure Deployments' :
         node.type === 'app' ? 'Linked Prototypes' : 'Entities';
 
@@ -633,6 +743,7 @@ export function PlexVisualizer({
         node.type === 'problem' ? 'problems' :
         node.type === 'solution' ? 'solutions' :
         node.type === 'architecture' ? 'architecture' :
+        node.type === 'technology' ? 'technologies' :
         node.type === 'infrastructure' ? 'infrastructure' :
         node.type === 'app' ? 'apps' : 'solutions';
 
@@ -664,6 +775,8 @@ export function PlexVisualizer({
       onNavigate(`/apps/${node.id}`);
     } else if (node.type === 'architecture') {
       onNavigate(`/architecture/${node.id}`);
+    } else if (node.type === 'technology') {
+      onNavigate(`/technologies/${node.id}`);
     } else if (node.type === 'infrastructure') {
       onNavigate(`/infrastructure/${node.id}`);
     }
@@ -690,6 +803,10 @@ export function PlexVisualizer({
             <linearGradient id="grad-sol-arch" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="var(--accent-solution)" />
               <stop offset="100%" stopColor="var(--accent-arch)" />
+            </linearGradient>
+            <linearGradient id="grad-sol-tech" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="var(--accent-solution)" />
+              <stop offset="100%" stopColor="var(--accent-tech)" />
             </linearGradient>
             <linearGradient id="grad-sol-infra" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="var(--accent-solution)" />

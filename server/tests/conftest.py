@@ -12,6 +12,7 @@ def mock_db(monkeypatch):
     mock_db.problems = AsyncMock()
     mock_db.solutions = AsyncMock()
     mock_db.architectures = AsyncMock()
+    mock_db.technologies = AsyncMock()
     mock_db.infrastructures = AsyncMock()
     mock_db.apps = AsyncMock()
     mock_db.counters = AsyncMock()
@@ -22,6 +23,7 @@ def mock_db(monkeypatch):
         mock_db.problems,
         mock_db.solutions,
         mock_db.architectures,
+        mock_db.technologies,
         mock_db.infrastructures,
         mock_db.apps,
         mock_db.users,
@@ -33,7 +35,7 @@ def mock_db(monkeypatch):
     # Counters collection: simulate an incrementing sequence per prefix.
     # find_one_and_update is called with (filter, update, upsert=, return_document=)
     # so the prefix lives in filter["_id"].
-    seq = {"PBM": 0, "ARC": 0, "INF": 0, "APP": 0}
+    seq = {"PBM": 0, "ARC": 0, "TECH": 0, "INF": 0, "APP": 0}
 
     def fake_next(filter_doc, *args, **kwargs):
         prefix = filter_doc["_id"]
@@ -47,6 +49,9 @@ def mock_db(monkeypatch):
     monkeypatch.setattr("server.database.client.solutions_col", mock_db.solutions)
     monkeypatch.setattr(
         "server.database.client.architectures_col", mock_db.architectures
+    )
+    monkeypatch.setattr(
+        "server.database.client.technologies_col", mock_db.technologies
     )
     monkeypatch.setattr(
         "server.database.client.infrastructures_col", mock_db.infrastructures

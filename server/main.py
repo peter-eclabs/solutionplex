@@ -19,6 +19,7 @@ from server.routers import (
     problems,
     search,
     solutions,
+    technologies,
 )
 from server.services.users import seed_superadmin
 
@@ -63,6 +64,7 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(problems.router)
 app.include_router(architectures.router)
+app.include_router(technologies.router)
 app.include_router(infrastructures.router)
 app.include_router(solutions.router)
 app.include_router(apps.router)

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { Solution, Architecture, Infrastructure } from '../api/client';
+import type { Solution, Architecture, Technology, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
 import { CharCounter } from './CharCounter';
 import { useRole } from '../auth/AuthContext';
@@ -34,6 +34,7 @@ export function CreateAppModal({
   const [proposeToSolution, setProposeToSolution] = useState(!!solutionId);
   const [selectedSolutionId, setSelectedSolutionId] = useState(solutionId ?? '');
   const [selectedArchIds, setSelectedArchIds] = useState<string[]>([]);
+  const [selectedTechIds, setSelectedTechIds] = useState<string[]>([]);
   const [selectedInfraIds, setSelectedInfraIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +55,12 @@ export function CreateAppModal({
     enabled: isOpen && !solutionId,
   });
 
+  const { data: technologies = [] } = useQuery<Technology[]>({
+    queryKey: ['technologies'],
+    queryFn: () => api.getTechnologies(),
+    enabled: isOpen && !solutionId,
+  });
+
   const { data: infrastructures = [] } = useQuery<Infrastructure[]>({
     queryKey: ['infrastructures'],
     queryFn: () => api.getInfrastructures(),
@@ -70,6 +77,7 @@ export function CreateAppModal({
       setProposeToSolution(!!solutionId);
       setSelectedSolutionId(solutionId ?? '');
       setSelectedArchIds([]);
+      setSelectedTechIds([]);
       setSelectedInfraIds([]);
       setSearchQuery(solutionTitle ?? '');
       setIsDropdownOpen(false);
@@ -148,8 +156,12 @@ export function CreateAppModal({
         setError('Please select a Solution to propose this App to.');
         return;
       }
-    } else if (selectedArchIds.length === 0 || selectedInfraIds.length === 0) {
-      setError('Please select both an Architecture Design and an Infrastructure Stack.');
+    } else if (
+      selectedArchIds.length === 0 ||
+      selectedTechIds.length === 0 ||
+      selectedInfraIds.length === 0
+    ) {
+      setError('Please select Architecture, Technologies, and Infrastructure.');
       return;
     }
 
@@ -161,6 +173,7 @@ export function CreateAppModal({
         live_url: liveUrl.trim() || undefined,
         solution_id: targetSolutionId || undefined,
         architecture_ids: proposeToSolution ? [] : selectedArchIds,
+        technology_ids: proposeToSolution ? [] : selectedTechIds,
         infrastructure_ids: proposeToSolution ? [] : selectedInfraIds,
       });
       onCreated();
@@ -187,7 +200,7 @@ export function CreateAppModal({
               Linked to solution: <strong>{solutionTitle}</strong>
               <br />
               <span style={{ opacity: 0.85 }}>
-                Architecture and infrastructure are inherited from this solution and remain on the app if unlinked later.
+                Architecture, technologies, and infrastructure are inherited from this solution and remain on the app if unlinked later.
               </span>
             </p>
           )}
@@ -336,6 +349,18 @@ export function CreateAppModal({
                     onChange={setSelectedArchIds}
                     placeholder="Search architecture designs…"
                     emptyText="No architectures available"
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Technologies (Required)</label>
+                  <MultiSelect
+                    id="app-tech"
+                    options={technologies.map((tech) => ({ value: tech.id, label: tech.title }))}
+                    selectedValues={selectedTechIds}
+                    onChange={setSelectedTechIds}
+                    placeholder="Search technologies…"
+                    emptyText="No technologies available"
                   />
                 </div>
 

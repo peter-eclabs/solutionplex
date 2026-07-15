@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
-import type { Solution, Architecture, Infrastructure } from '../api/client';
+import type { Solution, Architecture, Technology, Infrastructure } from '../api/client';
 import { MultiSelect } from './MultiSelect';
 import { DeleteButton } from './DeleteButton';
 import { LabelPreview } from './LabelPreview';
@@ -30,19 +30,23 @@ export function ProblemSolutions({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedArchIds, setSelectedArchIds] = useState<string[]>([]);
+  const [selectedTechIds, setSelectedTechIds] = useState<string[]>([]);
   const [selectedInfraIds, setSelectedInfraIds] = useState<string[]>([]);
   const [architectures, setArchitectures] = useState<Architecture[]>([]);
+  const [technologies, setTechnologies] = useState<Technology[]>([]);
   const [infrastructures, setInfrastructures] = useState<Infrastructure[]>([]);
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const loadRelations = useCallback(async () => {
     try {
-      const [aData, iData] = await Promise.all([
+      const [aData, tData, iData] = await Promise.all([
         api.getArchitectures(),
+        api.getTechnologies(),
         api.getInfrastructures(),
       ]);
       setArchitectures(aData);
+      setTechnologies(tData);
       setInfrastructures(iData);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -63,6 +67,7 @@ export function ProblemSolutions({
     setTitle('');
     setDescription('');
     setSelectedArchIds([]);
+    setSelectedTechIds([]);
     setSelectedInfraIds([]);
     setError('');
   };
@@ -78,8 +83,12 @@ export function ProblemSolutions({
       setError('Title and Description are required fields.');
       return;
     }
-    if (selectedArchIds.length === 0 || selectedInfraIds.length === 0) {
-      setError('Architecture Designs and Infrastructure Stacks are required.');
+    if (
+      selectedArchIds.length === 0 ||
+      selectedTechIds.length === 0 ||
+      selectedInfraIds.length === 0
+    ) {
+      setError('Architecture, Technologies, and Infrastructure are required.');
       return;
     }
     try {
@@ -88,6 +97,7 @@ export function ProblemSolutions({
         description: description.trim(),
         problem_id: problemId,
         architecture_ids: selectedArchIds,
+        technology_ids: selectedTechIds,
         infrastructure_ids: selectedInfraIds,
       });
       setIsFormOpen(false);
@@ -148,6 +158,9 @@ export function ProblemSolutions({
                   <LabelPreview
                     architectures={
                       s.effective_architectures ?? s.architectures ?? []
+                    }
+                    technologies={
+                      s.effective_technologies ?? s.technologies ?? []
                     }
                     infrastructures={
                       s.effective_infrastructures ?? s.infrastructures ?? []
@@ -217,6 +230,18 @@ export function ProblemSolutions({
                 </div>
 
                 <div className="form-field">
+                  <label>Technologies (required)</label>
+                  <MultiSelect
+                    id="psol-tech"
+                    options={technologies.map((tech) => ({ value: tech.id, label: tech.title }))}
+                    selectedValues={selectedTechIds}
+                    onChange={setSelectedTechIds}
+                    placeholder="Search technologies…"
+                    emptyText="No technologies available"
+                  />
+                </div>
+
+                <div className="form-field">
                   <label>Infrastructure Stacks (required)</label>
                   <MultiSelect
                     id="psol-infra"
@@ -235,6 +260,7 @@ export function ProblemSolutions({
                     !title.trim() ||
                     !description.trim() ||
                     selectedArchIds.length === 0 ||
+                    selectedTechIds.length === 0 ||
                     selectedInfraIds.length === 0
                   }
                 >

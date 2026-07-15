@@ -7,14 +7,22 @@ export interface LabelItem {
 
 interface LabelPreviewProps {
   architectures: LabelItem[];
+  technologies?: LabelItem[];
   infrastructures: LabelItem[];
   className?: string;
 }
 
-type Chip = { id: string; title: string; kind: 'arch' | 'infra' };
+type Chip = { id: string; title: string; kind: 'arch' | 'tech' | 'infra' };
+
+const TAG_CLASS: Record<Chip['kind'], string> = {
+  arch: 'tag-arch',
+  tech: 'tag-tech',
+  infra: 'tag-infra',
+};
 
 export function LabelPreview({
   architectures,
+  technologies = [],
   infrastructures,
   className = '',
 }: LabelPreviewProps) {
@@ -25,13 +33,18 @@ export function LabelPreview({
         title: a.title,
         kind: 'arch' as const,
       })),
+      ...technologies.map((t) => ({
+        id: t.id,
+        title: t.title,
+        kind: 'tech' as const,
+      })),
       ...infrastructures.map((i) => ({
         id: i.id,
         title: i.title,
         kind: 'infra' as const,
       })),
     ],
-    [architectures, infrastructures],
+    [architectures, technologies, infrastructures],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +111,7 @@ export function LabelPreview({
         {chips.map((c) => (
           <span
             key={`m-${c.kind}-${c.id}`}
-            className={`solution-tag ${c.kind === 'arch' ? 'tag-arch' : 'tag-infra'}`}
+            className={`solution-tag ${TAG_CLASS[c.kind]}`}
           >
             {c.title}
           </span>
@@ -110,7 +123,7 @@ export function LabelPreview({
         {shown.map((c) => (
           <span
             key={`${c.kind}-${c.id}`}
-            className={`solution-tag ${c.kind === 'arch' ? 'tag-arch' : 'tag-infra'}`}
+            className={`solution-tag ${TAG_CLASS[c.kind]}`}
           >
             {c.title}
           </span>

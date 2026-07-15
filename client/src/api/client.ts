@@ -19,6 +19,12 @@ export interface ArchitectureShort {
   title: string;
 }
 
+export interface TechnologyShort {
+  id: string;
+  code?: string | null;
+  title: string;
+}
+
 export interface InfrastructureShort {
   id: string;
   code?: string | null;
@@ -53,6 +59,15 @@ export interface Architecture {
   updated_at: string;
 }
 
+export interface Technology {
+  id: string;
+  code?: string | null;
+  title: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Infrastructure {
   id: string;
   code?: string | null;
@@ -70,9 +85,11 @@ export interface Solution {
   problem: ProblemShort | null;
   /** Solution-owned labels (edit forms). */
   architectures: ArchitectureShort[];
+  technologies: TechnologyShort[];
   infrastructures: InfrastructureShort[];
   /** Card preview: solution-owned ∪ linked apps' labels (display only). */
   effective_architectures?: ArchitectureShort[];
+  effective_technologies?: TechnologyShort[];
   effective_infrastructures?: InfrastructureShort[];
   apps: AppShort[];
   created_at: string;
@@ -91,6 +108,7 @@ export interface AppPrototype {
   solutions: SolutionShort[];
   solution: SolutionShort | null;
   architectures: ArchitectureShort[];
+  technologies: TechnologyShort[];
   infrastructures: InfrastructureShort[];
   created_at: string;
   updated_at: string;
@@ -176,6 +194,16 @@ export const api = {
   deleteArchitecture: (id: string) =>
     request<{ detail: string }>(`/api/architectures/${id}`, { method: 'DELETE' }),
 
+  // Technology endpoints
+  getTechnologies: (q?: string) => request<Technology[]>(`/api/technologies/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getTechnology: (id: string) => request<Technology>(`/api/technologies/${id}`),
+  createTechnology: (data: { title: string; description: string }) =>
+    request<Technology>('/api/technologies/', { method: 'POST', body: JSON.stringify(data) }),
+  updateTechnology: (id: string, data: { title?: string; description?: string }) =>
+    request<Technology>(`/api/technologies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTechnology: (id: string) =>
+    request<{ detail: string }>(`/api/technologies/${id}`, { method: 'DELETE' }),
+
   // Infrastructure endpoints
   getInfrastructures: (q?: string) => request<Infrastructure[]>(`/api/infrastructures/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getInfrastructure: (id: string) => request<Infrastructure>(`/api/infrastructures/${id}`),
@@ -189,9 +217,9 @@ export const api = {
   // Solution endpoints
   getSolutions: (q?: string) => request<Solution[]>(`/api/solutions/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getSolution: (id: string) => request<Solution>(`/api/solutions/${id}`),
-  createSolution: (data: { title: string; description: string; problem_id: string; architecture_ids: string[]; infrastructure_ids: string[] }) =>
+  createSolution: (data: { title: string; description: string; problem_id: string; architecture_ids: string[]; technology_ids: string[]; infrastructure_ids: string[] }) =>
     request<Solution>('/api/solutions/', { method: 'POST', body: JSON.stringify(data) }),
-  updateSolution: (id: string, data: { title?: string; description?: string; problem_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
+  updateSolution: (id: string, data: { title?: string; description?: string; problem_id?: string; architecture_ids?: string[]; technology_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<Solution>(`/api/solutions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSolution: (id: string) =>
     request<{ detail: string }>(`/api/solutions/${id}`, { method: 'DELETE' }),
@@ -199,9 +227,9 @@ export const api = {
   // App endpoints
   getApps: (q?: string) => request<AppPrototype[]>(`/api/apps/${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   getApp: (id: string) => request<AppPrototype>(`/api/apps/${id}`),
-  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
+  createApp: (data: { title: string; description: string; github_url: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; technology_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<AppPrototype>('/api/apps/', { method: 'POST', body: JSON.stringify(data) }),
-  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; infrastructure_ids?: string[] }) =>
+  updateApp: (id: string, data: { title?: string; description?: string; github_url?: string; live_url?: string; solution_id?: string; architecture_ids?: string[]; technology_ids?: string[]; infrastructure_ids?: string[] }) =>
     request<AppPrototype>(`/api/apps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteApp: (id: string) =>
     request<{ detail: string }>(`/api/apps/${id}`, { method: 'DELETE' }),

@@ -10,6 +10,7 @@ from server.schemas.models import (
     ProblemResponse,
     Role,
     SolutionResponse,
+    TechnologyResponse,
 )
 from server.security.deps import require_role
 from server.services import (
@@ -18,6 +19,7 @@ from server.services import (
     infrastructures,
     problems,
     solutions,
+    technologies,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,8 @@ router = APIRouter(prefix="/api/search", tags=["Search"])
 async def search(
     q: str = Query(..., min_length=1),
     tab: str = Query(
-        ..., pattern="^(problems|solutions|architecture|infrastructure|apps)$"
+        ...,
+        pattern="^(problems|solutions|architecture|technologies|infrastructure|apps)$",
     ),
 ) -> Any:
     try:
@@ -46,6 +49,9 @@ async def search(
         elif tab == "architecture":
             res = await architectures.list_architectures(q=q)
             return [ArchitectureResponse.model_validate(r) for r in res]
+        elif tab == "technologies":
+            res = await technologies.list_technologies(q=q)
+            return [TechnologyResponse.model_validate(r) for r in res]
         elif tab == "infrastructure":
             res = await infrastructures.list_infrastructures(q=q)
             return [InfrastructureResponse.model_validate(r) for r in res]

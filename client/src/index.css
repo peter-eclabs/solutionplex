@@ -23,6 +23,8 @@
   --accent-infra-dim: rgba(245, 158, 11, 0.1);
   --accent-arch: #8b5cf6;
   --accent-arch-dim: rgba(139, 92, 246, 0.1);
+  --accent-tech: #14b8a6;
+  --accent-tech-dim: rgba(20, 184, 166, 0.1);
   
   /* Typography Roles */
   --font-display: 'Space Grotesk', -apple-system, sans-serif;

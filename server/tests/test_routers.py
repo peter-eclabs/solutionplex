@@ -33,6 +33,27 @@ def test_create_problem_router(client, mock_db, admin_headers):
     assert data["code"] == "PBM-001"
 
 
+def test_create_technology_router(client, mock_db, admin_headers):
+    mock_db.technologies.insert_one = AsyncMock(
+        return_value=type(
+            "Result",
+            (object,),
+            {"inserted_id": ObjectId("60b8d5a1b55a8b0c848b4570")},
+        )()
+    )
+
+    res = client.post(
+        "/api/technologies/",
+        json={"title": "React Query", "description": "Server-state cache layer"},
+        headers=admin_headers,
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["title"] == "React Query"
+    assert data["id"] == "60b8d5a1b55a8b0c848b4570"
+    assert data["code"] == "TECH-001"
+
+
 def test_create_solution_relationship_validation(client, mock_db, admin_headers):
     # If problem is not found, return 400
     mock_db.problems.find_one = AsyncMock(return_value=None)

@@ -31,6 +31,18 @@ async def create_solution(data: SolutionCreate) -> dict:
             raise ValueError(f"Associated Architecture not found: {a_id}")
         arch_object_ids.append(ObjectId(a_id))
 
+    # 1:N technology relationship validation
+    tech_object_ids = []
+    for t_id in data.technology_ids:
+        if not ObjectId.is_valid(t_id):
+            raise ValueError(f"Invalid technology_id: {t_id}")
+        tech_exists = await client.technologies_col.find_one(
+            {"_id": ObjectId(t_id)}
+        )
+        if not tech_exists:
+            raise ValueError(f"Associated Technology not found: {t_id}")
+        tech_object_ids.append(ObjectId(t_id))
+
     # 1:N infrastructure relationship validation
     infra_object_ids = []
     for i_id in data.infrastructure_ids:
@@ -48,6 +60,7 @@ async def create_solution(data: SolutionCreate) -> dict:
         "description": data.description,
         "problem_id": ObjectId(data.problem_id),
         "architecture_ids": arch_object_ids,
+        "technology_ids": tech_object_ids,
         "infrastructure_ids": infra_object_ids,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
@@ -68,11 +81,15 @@ async def populate_solution(s: dict) -> dict:
     s["hidden"] = bool(prob and prob.get("hidden"))
 
     own_arch = s.get("architecture_ids") or []
+    own_tech = s.get("technology_ids") or []
     own_infra = s.get("infrastructure_ids") or []
 
     # Solution-owned labels (edit forms / ownership — not expanded by apps)
     s["architectures"] = await _resolve_label_docs(
         _union_ref_ids(own_arch), client.architectures_col
+    )
+    s["technologies"] = await _resolve_label_docs(
+        _union_ref_ids(own_tech), client.technologies_col
     )
     s["infrastructures"] = await _resolve_label_docs(
         _union_ref_ids(own_infra), client.infrastructures_col
@@ -95,10 +112,15 @@ async def populate_solution(s: dict) -> dict:
     # Card preview: solution-owned ∪ each linked app's stored labels (display only).
     # App documents are not modified when linking.
     app_arch_lists = [a.get("architecture_ids") or [] for a in apps]
+    app_tech_lists = [a.get("technology_ids") or [] for a in apps]
     app_infra_lists = [a.get("infrastructure_ids") or [] for a in apps]
     s["effective_architectures"] = await _resolve_label_docs(
         _union_ref_ids(own_arch, *app_arch_lists),
         client.architectures_col,
+    )
+    s["effective_technologies"] = await _resolve_label_docs(
+        _union_ref_ids(own_tech, *app_tech_lists),
+        client.technologies_col,
     )
     s["effective_infrastructures"] = await _resolve_label_docs(
         _union_ref_ids(own_infra, *app_infra_lists),
@@ -184,6 +206,19 @@ async def update_solution(solution_id: str, data: SolutionUpdate) -> Optional[di
                 raise ValueError(f"Associated Architecture not found: {a_id}")
             arch_object_ids.append(ObjectId(a_id))
         update_fields["architecture_ids"] = arch_object_ids
+
+    if "technology_ids" in update_fields:
+        tech_object_ids = []
+        for t_id in update_fields["technology_ids"]:
+            if not ObjectId.is_valid(t_id):
+                raise ValueError(f"Invalid technology_id: {t_id}")
+            tech_exists = await client.technologies_col.find_one(
+                {"_id": ObjectId(t_id)}
+            )
+            if not tech_exists:
+                raise ValueError(f"Associated Technology not found: {t_id}")
+            tech_object_ids.append(ObjectId(t_id))
+        update_fields["technology_ids"] = tech_object_ids
 
     if "infrastructure_ids" in update_fields:
         infra_object_ids = []

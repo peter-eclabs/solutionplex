@@ -78,17 +78,22 @@ async def create_app(data: AppCreate) -> dict:
         sol_object_id = ObjectId(data.solution_id)
 
     # When linked to a solution with no explicit labels, snapshot the solution's
-    # architecture/infrastructure onto the app so they remain after unlink.
+    # architecture/technology/infrastructure onto the app so they remain after unlink.
     if (
         sol_doc is not None
         and not data.architecture_ids
+        and not data.technology_ids
         and not data.infrastructure_ids
     ):
         arch_object_ids = list(sol_doc.get("architecture_ids") or [])
+        tech_object_ids = list(sol_doc.get("technology_ids") or [])
         infra_object_ids = list(sol_doc.get("infrastructure_ids") or [])
     else:
         arch_object_ids = await _resolve_ref_ids(
             data.architecture_ids, client.architectures_col, "architecture"
+        )
+        tech_object_ids = await _resolve_ref_ids(
+            data.technology_ids, client.technologies_col, "technology"
         )
         infra_object_ids = await _resolve_ref_ids(
             data.infrastructure_ids, client.infrastructures_col, "infrastructure"
@@ -101,6 +106,7 @@ async def create_app(data: AppCreate) -> dict:
         "live_url": data.live_url,
         "solution_id": sol_object_id,
         "architecture_ids": arch_object_ids,
+        "technology_ids": tech_object_ids,
         "infrastructure_ids": infra_object_ids,
         "code": await next_code("APP"),
         "created_at": datetime.utcnow(),
@@ -139,10 +145,14 @@ async def _populate_effective_labels(a: dict, sol: Optional[dict]) -> None:
     """
     _ = sol  # Solution labels do not appear on the app card.
     arch_id_strs = _union_ref_ids(a.get("architecture_ids") or [])
+    tech_id_strs = _union_ref_ids(a.get("technology_ids") or [])
     infra_id_strs = _union_ref_ids(a.get("infrastructure_ids") or [])
 
     a["architectures"] = await _resolve_label_docs(
         arch_id_strs, client.architectures_col
+    )
+    a["technologies"] = await _resolve_label_docs(
+        tech_id_strs, client.technologies_col
     )
     a["infrastructures"] = await _resolve_label_docs(
         infra_id_strs, client.infrastructures_col
@@ -272,6 +282,11 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
                     list(update_fields["architecture_ids"] or []),
                     list(sol.get("architecture_ids") or []),
                 )
+            if "technology_ids" in update_fields:
+                update_fields["technology_ids"] = _union_ref_ids(
+                    list(update_fields["technology_ids"] or []),
+                    list(sol.get("technology_ids") or []),
+                )
             if "infrastructure_ids" in update_fields:
                 update_fields["infrastructure_ids"] = _union_ref_ids(
                     list(update_fields["infrastructure_ids"] or []),
@@ -301,6 +316,14 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
                         update_fields["architecture_ids"] = [
                             str(x) for x in source_arch
                         ]
+                    if "technology_ids" not in update_fields:
+                        own_tech = existing.get("technology_ids") or []
+                        source_tech = own_tech or (
+                            prev_sol.get("technology_ids") or []
+                        )
+                        update_fields["technology_ids"] = [
+                            str(x) for x in source_tech
+                        ]
                     if "infrastructure_ids" not in update_fields:
                         own_infra = existing.get("infrastructure_ids") or []
                         source_infra = own_infra or (
@@ -316,6 +339,14 @@ async def update_app(app_id: str, data: AppUpdate) -> Optional[dict]:
             list(raw_arch),
             client.architectures_col,
             "architecture",
+        )
+
+    if "technology_ids" in update_fields:
+        raw_tech = update_fields["technology_ids"] or []
+        update_fields["technology_ids"] = await _resolve_ref_ids(
+            list(raw_tech),
+            client.technologies_col,
+            "technology",
         )
 
     if "infrastructure_ids" in update_fields:

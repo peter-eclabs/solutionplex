@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import './App.css';
 import { ProblemsTab } from './components/ProblemsTab';
 import { ArchitectureTab } from './components/ArchitectureTab';
+import { TechnologiesTab } from './components/TechnologiesTab';
 import { InfrastructureTab } from './components/InfrastructureTab';
 import { AppsTab } from './components/AppsTab';
 import { DetailView } from './components/DetailView';
@@ -14,7 +15,7 @@ import { AuthProvider, useAuth, useRole } from './auth/AuthContext';
 import { hasMinRole } from './auth/guards';
 import type { UserRole } from './auth/jwt';
 
-export type Tab = 'problems' | 'solutions' | 'architecture' | 'infrastructure' | 'apps';
+export type Tab = 'problems' | 'solutions' | 'architecture' | 'technologies' | 'infrastructure' | 'apps';
 
 export interface TabInfo {
   id: Tab;
@@ -22,7 +23,7 @@ export interface TabInfo {
 }
 
 function parseRoute(pathname: string): { component: Tab; id: string } | null {
-  const match = pathname.match(/^\/(problems|problem|solutions|solution|architecture|architectures|infrastructure|infrastructures|apps|app)\/([a-zA-Z0-9_-]+)$/);
+  const match = pathname.match(/^\/(problems|problem|solutions|solution|architecture|architectures|technologies|technology|infrastructure|infrastructures|apps|app)\/([a-zA-Z0-9_-]+)$/);
   if (!match) return null;
   
   let component = match[1];
@@ -31,6 +32,7 @@ function parseRoute(pathname: string): { component: Tab; id: string } | null {
   if (component === 'problem') component = 'problems';
   if (component === 'solution') component = 'solutions';
   if (component === 'architectures') component = 'architecture';
+  if (component === 'technology') component = 'technologies';
   if (component === 'infrastructures') component = 'infrastructure';
   if (component === 'app') component = 'apps';
   
@@ -97,6 +99,7 @@ function AppContent() {
   const tabs: TabInfo[] = [
     { id: 'problems', label: 'Problems' },
     { id: 'architecture', label: 'Architecture' },
+    { id: 'technologies', label: 'Technologies' },
     { id: 'infrastructure', label: 'Infrastructure' },
     { id: 'apps', label: 'Apps' },
   ];
@@ -223,6 +226,15 @@ function AppContent() {
                   <ArchitectureTab
                     searchQuery={searchQuery}
                     onCardClick={(id) => navigate(`/architecture/${id}`)}
+                    onWriteDenied={handleWriteDenied}
+                  />
+                </div>
+              )}
+              {activeTab === 'technologies' && (
+                <div className="tab-view">
+                  <TechnologiesTab
+                    searchQuery={searchQuery}
+                    onCardClick={(id) => navigate(`/technologies/${id}`)}
                     onWriteDenied={handleWriteDenied}
                   />
                 </div>

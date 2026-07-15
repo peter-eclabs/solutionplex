@@ -120,6 +120,12 @@ class ArchitectureShort(BaseModel):
     title: str
 
 
+class TechnologyShort(BaseModel):
+    id: str
+    code: Optional[str] = None
+    title: str
+
+
 class InfrastructureShort(BaseModel):
     id: str
     code: Optional[str] = None
@@ -190,6 +196,32 @@ class ArchitectureResponse(BaseModel):
     )
 
 
+# Technologies
+class TechnologyCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1)
+
+
+class TechnologyUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+
+
+class TechnologyResponse(BaseModel):
+    id: PyObjectId = Field(alias="_id", serialization_alias="id")
+    code: Optional[str] = None
+    title: str
+    description: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        from_attributes=True,
+    )
+
+
 # Infrastructures
 class InfrastructureCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
@@ -222,6 +254,7 @@ class SolutionCreate(BaseModel):
     description: str = Field(..., min_length=1)
     problem_id: str
     architecture_ids: List[str] = []
+    technology_ids: List[str] = []
     infrastructure_ids: List[str] = []
 
 
@@ -230,6 +263,7 @@ class SolutionUpdate(BaseModel):
     description: Optional[str] = Field(None, min_length=1)
     problem_id: Optional[str] = None
     architecture_ids: Optional[List[str]] = None
+    technology_ids: Optional[List[str]] = None
     infrastructure_ids: Optional[List[str]] = None
 
 
@@ -240,9 +274,11 @@ class SolutionResponse(BaseModel):
     problem: Optional[ProblemShort] = None
     # Solution-owned labels (used for edit forms and ownership)
     architectures: List[ArchitectureShort] = []
+    technologies: List[TechnologyShort] = []
     infrastructures: List[InfrastructureShort] = []
     # Card preview: solution-owned ∪ linked apps' stored labels (display only)
     effective_architectures: List[ArchitectureShort] = []
+    effective_technologies: List[TechnologyShort] = []
     effective_infrastructures: List[InfrastructureShort] = []
     apps: List[AppShort] = []
     created_at: datetime
@@ -264,6 +300,7 @@ class AppCreate(BaseModel):
     live_url: Optional[str] = None
     solution_id: Optional[str] = None
     architecture_ids: List[str] = []
+    technology_ids: List[str] = []
     infrastructure_ids: List[str] = []
 
 
@@ -274,6 +311,7 @@ class AppUpdate(BaseModel):
     live_url: Optional[str] = None
     solution_id: Optional[str] = None
     architecture_ids: Optional[List[str]] = None
+    technology_ids: Optional[List[str]] = None
     infrastructure_ids: Optional[List[str]] = None
 
 
@@ -288,6 +326,7 @@ class AppResponse(BaseModel):
     solutions: List[SolutionShort] = []
     solution: Optional[SolutionShort] = None
     architectures: List[ArchitectureShort] = []
+    technologies: List[TechnologyShort] = []
     infrastructures: List[InfrastructureShort] = []
     created_at: datetime
     updated_at: datetime
