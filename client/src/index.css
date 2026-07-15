@@ -1,65 +1,59 @@
+@import "tailwindcss";
+
 :root {
-  /* Quantum Blueprint Palette */
-  --bg-primary: #060814;
-  --bg-secondary: #0c1020;
-  --bg-tertiary: #12182d;
-  
-  --border-grid: #1b2a4a;
-  --border-hover: #334b7a;
-  --border-focus: #00d8f6;
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-  
-  /* Neon Accents */
-  --accent-cyan: #00d8f6;
-  --accent-cyan-dim: rgba(0, 216, 246, 0.15);
-  --accent-solution: #00f59b;
-  --accent-solution-dim: rgba(0, 245, 155, 0.1);
-  --accent-problem: #ff4d79;
-  --accent-problem-dim: rgba(255, 77, 121, 0.1);
-  --accent-infra: #f59e0b;
-  --accent-infra-dim: rgba(245, 158, 11, 0.1);
-  --accent-arch: #8b5cf6;
-  --accent-arch-dim: rgba(139, 92, 246, 0.1);
-  --accent-tech: #14b8a6;
-  --accent-tech-dim: rgba(20, 184, 166, 0.1);
-  
-  /* Typography Roles */
-  --font-display: 'Space Grotesk', -apple-system, sans-serif;
-  --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
-  --font-mono: 'Space Mono', monospace;
-  
-  /* Borders and Curves */
-  --radius-sm: 2px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Tailwind-backed semantic palette */
+  --bg-primary: var(--color-slate-950);
+  --bg-secondary: var(--color-slate-900);
+  --bg-tertiary: var(--color-slate-800);
+
+  --border-grid: var(--color-slate-800);
+  --border-hover: var(--color-slate-500);
+  --border-focus: var(--color-cyan-400);
+
+  --text-primary: var(--color-slate-50);
+  --text-secondary: var(--color-slate-400);
+  --text-muted: var(--color-slate-600);
+
+  /* Entity accents from the Tailwind palette */
+  --accent-cyan: var(--color-cyan-400);
+  --accent-cyan-dim: color-mix(in srgb, var(--accent-cyan) 15%, transparent);
+  --accent-solution: var(--color-emerald-400);
+  --accent-solution-dim: color-mix(in srgb, var(--accent-solution) 12%, transparent);
+  --accent-problem: var(--color-rose-400);
+  --accent-problem-dim: color-mix(in srgb, var(--accent-problem) 12%, transparent);
+  --accent-infra: var(--color-amber-400);
+  --accent-infra-dim: color-mix(in srgb, var(--accent-infra) 12%, transparent);
+  --accent-arch: var(--color-violet-400);
+  --accent-arch-dim: color-mix(in srgb, var(--accent-arch) 12%, transparent);
+
+  --role-superadmin: var(--color-yellow-400);
+  --role-superadmin-dim: color-mix(in srgb, var(--role-superadmin) 14%, transparent);
+  --role-admin: var(--color-fuchsia-400);
+  --role-admin-dim: color-mix(in srgb, var(--role-admin) 14%, transparent);
+  --role-reader: var(--color-orange-400);
+  --role-reader-dim: color-mix(in srgb, var(--role-reader) 14%, transparent);
 
   /* Dropdown menus: show N rows, scroll/search for the rest */
   --dropdown-visible-items: 5;
   --dropdown-option-height: 2.4rem;
   --dropdown-max-height: calc(var(--dropdown-visible-items) * var(--dropdown-option-height));
-  
+
   /* Smooth Animations */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --blueprint-glow: 0 0 15px rgba(0, 216, 246, 0.2);
-}
-
-/* Global Blueprint Background Grid Effect */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  --blueprint-glow: 0 0 15px color-mix(in srgb, var(--accent-cyan) 25%, transparent);
 }
 
 body {
   background-color: var(--bg-primary);
-  background-image: 
-    linear-gradient(rgba(27, 42, 74, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(27, 42, 74, 0.15) 1px, transparent 1px);
-  background-size: 40px 40px;
+  /* background-image:
+    linear-gradient(color-mix(in srgb, var(--color-slate-700) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-slate-700) 18%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px; */
   color: var(--text-primary);
   font-family: var(--font-body);
   line-height: 1.6;
@@ -67,13 +61,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-input, select, textarea, button {
+input,
+select,
+textarea,
+button {
   font-family: inherit;
   color: inherit;
   background: none;

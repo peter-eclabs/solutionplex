@@ -131,21 +131,21 @@
 }
 
 .admin-role-badge.role-superadmin {
-  border-color: #f5c542;
-  color: #f5c542;
-  background-color: rgba(245, 197, 66, 0.12);
+  border-color: var(--role-superadmin);
+  color: var(--role-superadmin);
+  background-color: var(--role-superadmin-dim);
 }
 
 .admin-role-badge.role-admin {
-  border-color: #e040fb;
-  color: #e040fb;
-  background-color: rgba(224, 64, 251, 0.12);
+  border-color: var(--role-admin);
+  color: var(--role-admin);
+  background-color: var(--role-admin-dim);
 }
 
 .admin-role-badge.role-reader {
-  border-color: #ff9800;
-  color: #ff9800;
-  background-color: rgba(255, 152, 0, 0.12);
+  border-color: var(--role-reader);
+  color: var(--role-reader);
+  background-color: var(--role-reader-dim);
 }
 
 .admin-no-action {

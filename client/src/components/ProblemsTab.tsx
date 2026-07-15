@@ -11,6 +11,7 @@ import { useRole } from '../auth/AuthContext';
 import { HiddenToggle } from './HiddenToggle';
 import { HiddenBadge } from './HiddenBadge';
 import './TabStyles.css';
+import { CheckCircle, X } from 'lucide-react';
 
 interface ProblemsTabProps {
   searchQuery: string;
@@ -118,16 +119,16 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
         </div>
       )}
 
-        <section className="list-panel">
-          {loading ? (
-            <p className="status-text">Loading problem entries...</p>
-          ) : queryError ? (
-            <div className="error-banner">{(queryError as Error).message || 'Failed to load problems'}</div>
-          ) : (
+      <section className="list-panel">
+        {loading ? (
+          <p className="status-text">Loading problem entries...</p>
+        ) : queryError ? (
+          <div className="error-banner">{(queryError as Error).message || 'Failed to load problems'}</div>
+        ) : (
           <div className="cards-grid">
             <Can action="write">
               <article
-                className="entity-card add-card-trigger btn-problem"
+                className="entity-card add-card-trigger"
                 onClick={openCreate}
                 role="button"
                 tabIndex={0}
@@ -166,18 +167,27 @@ export function ProblemsTab({ searchQuery, onCardClick, onWriteDenied }: Problem
                 />
 
                 <div className="card-header">
-                  {p.code && <span className="entity-code">{p.code}</span>}
+                  <div className="flex items-center gap-2">
+                    {p.code && <span className="entity-code">{p.code}</span>}
+                    {p.hidden && <HiddenBadge />}
+                  </div>
                   <CardTitle title={p.title} />
-                  {p.hidden && <HiddenBadge />}
+
                 </div>
-                <p className="card-created-on">{formatCreatedOn(p.created_at)}</p>
-                {p.solutions.length > 0 ? (
-                  <p className="problem-status problem-solved">
-                    Solved — {p.solutions.length} Solution{p.solutions.length === 1 ? '' : 's'}
-                  </p>
-                ) : (
-                  <p className="problem-status problem-unsolved">Unsolved</p>
-                )}
+                <div className="card-footer">
+                  <p className="card-created-on">{formatCreatedOn(p.created_at)}</p>
+                  {p.solutions.length > 0 ? (
+                    <p className="problem-status problem-solved flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3" />
+                      Solved — {p.solutions.length} Solution{p.solutions.length === 1 ? '' : 's'}
+                    </p>
+                  ) : (
+                    <p className="problem-status problem-unsolved flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      Unsolved
+                    </p>
+                  )}
+                </div>
               </article>
             ))}
           </div>
