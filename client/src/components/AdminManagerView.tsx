@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 import type { UserResponse } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { ConfirmDialog } from './ConfirmDialog';
 import './AdminManagerView.css';
 
 interface AdminManagerViewProps {
@@ -14,6 +15,7 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<UserResponse | null>(null);
 
   const loadUsers = useCallback(async () => {
     setError('');
@@ -53,16 +55,14 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
     }
   };
 
-  const handleRemove = async (target: UserResponse) => {
-    const ok = window.confirm(
-      `Remove ${target.email}? They must re-register.`,
-    );
-    if (!ok) return;
-
+  const handleConfirmRemove = async () => {
+    if (!pendingRemove) return;
+    const target = pendingRemove;
     setBusyId(target.id);
     setError('');
     try {
       await adminApi.removeUser(target.id);
+      setPendingRemove(null);
       await loadUsers();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -74,6 +74,8 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
       setBusyId(null);
     }
   };
+
+  const removeBusy = pendingRemove !== null && busyId === pendingRemove.id;
 
   return (
     <div className="admin-manager">
@@ -150,9 +152,9 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
                           type="button"
                           className="admin-remove-btn"
                           disabled={isBusy}
-                          onClick={() => void handleRemove(u)}
+                          onClick={() => setPendingRemove(u)}
                         >
-                          {isBusy ? 'Removing…' : 'Remove'}
+                          Remove
                         </button>
                       )}
                     </div>
@@ -163,6 +165,27 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
           </tbody>
         </table>
       )}
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title="Remove user"
+        message={
+          pendingRemove ? (
+            <>
+              Remove <strong>{pendingRemove.email}</strong>? They must
+              re-register.
+            </>
+          ) : null
+        }
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        danger
+        busy={removeBusy}
+        onCancel={() => {
+          if (!removeBusy) setPendingRemove(null);
+        }}
+        onConfirm={() => void handleConfirmRemove()}
+      />
     </div>
   );
 }
