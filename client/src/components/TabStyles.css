@@ -355,6 +355,23 @@
   font-weight: 700;
 }
 
+.entity-code {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  padding: 0.18rem 0.45rem;
+  background: var(--accent-problem-dim);
+  border: 1px solid var(--accent-problem);
+  border-radius: 4px;
+}
+
 .problem-card .entity-code {
   color: var(--accent-problem);
   background: var(--accent-problem-dim);
