@@ -40,7 +40,8 @@
 
 .admin-back-btn,
 .admin-grant-btn,
-.admin-revoke-btn {
+.admin-revoke-btn,
+.admin-remove-btn {
   background: transparent;
   border: 1px solid var(--border-grid);
   color: var(--text-secondary);
@@ -67,19 +68,29 @@
   background-color: var(--accent-cyan-dim);
 }
 
-.admin-revoke-btn {
+.admin-revoke-btn,
+.admin-remove-btn {
   border-color: var(--accent-problem);
   color: var(--accent-problem);
 }
 
-.admin-revoke-btn:hover:not(:disabled) {
+.admin-revoke-btn:hover:not(:disabled),
+.admin-remove-btn:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--accent-problem) 15%, transparent);
 }
 
 .admin-grant-btn:disabled,
-.admin-revoke-btn:disabled {
+.admin-revoke-btn:disabled,
+.admin-remove-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 .admin-user-table {

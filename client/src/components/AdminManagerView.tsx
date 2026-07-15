@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 import type { UserResponse } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 import './AdminManagerView.css';
 
 interface AdminManagerViewProps {
@@ -8,6 +9,7 @@ interface AdminManagerViewProps {
 }
 
 export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,6 +53,28 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
     }
   };
 
+  const handleRemove = async (target: UserResponse) => {
+    const ok = window.confirm(
+      `Remove ${target.email}? They must re-register.`,
+    );
+    if (!ok) return;
+
+    setBusyId(target.id);
+    setError('');
+    try {
+      await adminApi.removeUser(target.id);
+      await loadUsers();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to remove user');
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="admin-manager">
       <div className="admin-manager-header">
@@ -65,7 +89,8 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
       </div>
 
       <p className="admin-manager-subtitle">
-        Existing logins. Grant or revoke admin privilege for a selected user.
+        Existing logins. Grant or revoke admin, or remove a user so they must
+        re-register.
       </p>
 
       {error && <div className="admin-manager-error">{error}</div>}
@@ -86,6 +111,7 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
           <tbody>
             {users.map((u) => {
               const isBusy = busyId === u.id;
+              const isSelf = user?.id === u.id;
               return (
                 <tr key={u.id}>
                   <td className="admin-user-email">{u.email}</td>
@@ -95,27 +121,41 @@ export function AdminManagerView({ onNavigate }: AdminManagerViewProps) {
                     </span>
                   </td>
                   <td>
-                    {u.role === 'reader' ? (
-                      <button
-                        type="button"
-                        className="admin-grant-btn"
-                        disabled={isBusy}
-                        onClick={() => void handleSetRole(u.id, 'admin')}
-                      >
-                        {isBusy ? 'Updating…' : 'Grant admin'}
-                      </button>
-                    ) : u.role === 'admin' ? (
-                      <button
-                        type="button"
-                        className="admin-revoke-btn"
-                        disabled={isBusy}
-                        onClick={() => void handleSetRole(u.id, 'reader')}
-                      >
-                        {isBusy ? 'Updating…' : 'Revoke admin'}
-                      </button>
-                    ) : (
-                      <span className="admin-no-action">—</span>
-                    )}
+                    <div className="admin-actions">
+                      {u.role === 'reader' ? (
+                        <button
+                          type="button"
+                          className="admin-grant-btn"
+                          disabled={isBusy}
+                          onClick={() => void handleSetRole(u.id, 'admin')}
+                        >
+                          {isBusy ? 'Updating…' : 'Grant admin'}
+                        </button>
+                      ) : u.role === 'admin' ? (
+                        <button
+                          type="button"
+                          className="admin-revoke-btn"
+                          disabled={isBusy}
+                          onClick={() => void handleSetRole(u.id, 'reader')}
+                        >
+                          {isBusy ? 'Updating…' : 'Revoke admin'}
+                        </button>
+                      ) : null}
+                      {isSelf ? (
+                        u.role === 'superadmin' ? (
+                          <span className="admin-no-action">—</span>
+                        ) : null
+                      ) : (
+                        <button
+                          type="button"
+                          className="admin-remove-btn"
+                          disabled={isBusy}
+                          onClick={() => void handleRemove(u)}
+                        >
+                          {isBusy ? 'Removing…' : 'Remove'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
