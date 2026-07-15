@@ -128,3 +128,84 @@ class TestAdminPatchUserRole:
             headers=_headers("superadmin"),
         )
         assert resp.status_code == 400
+
+
+class TestAdminDeleteUser:
+    def test_unauthenticated_401(self, client: TestClient):
+        resp = client.delete("/api/admin/users/0000000000000000000000bb")
+        assert resp.status_code == 401
+
+    def test_admin_forbidden_403(self, client: TestClient):
+        resp = client.delete(
+            "/api/admin/users/0000000000000000000000bb",
+            headers=_headers("admin"),
+        )
+        assert resp.status_code == 403
+
+    def test_reader_forbidden_403(self, client: TestClient):
+        resp = client.delete(
+            "/api/admin/users/0000000000000000000000bb",
+            headers=_headers("reader"),
+        )
+        assert resp.status_code == 403
+
+    def test_superadmin_deletes_other_user(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ):
+        mock_delete = AsyncMock(return_value=None)
+        monkeypatch.setattr(
+            "server.routers.admin.users_service.delete_user",
+            mock_delete,
+        )
+        actor = "test-user-id"
+        target = "0000000000000000000000bb"
+        resp = client.delete(
+            f"/api/admin/users/{target}",
+            headers=_headers("superadmin", subject=actor),
+        )
+        assert resp.status_code == 204
+        mock_delete.assert_awaited_once_with(target, actor)
+
+    def test_superadmin_self_delete_returns_400(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ):
+        from fastapi import HTTPException, status as http_status
+
+        async def _raise(user_id: str, actor_id: str):
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="Cannot remove your own account",
+            )
+
+        monkeypatch.setattr(
+            "server.routers.admin.users_service.delete_user",
+            _raise,
+        )
+        actor = "0000000000000000000000aa"
+        resp = client.delete(
+            f"/api/admin/users/{actor}",
+            headers=_headers("superadmin", subject=actor),
+        )
+        assert resp.status_code == 400
+        assert "own account" in resp.json()["detail"]
+
+    def test_superadmin_not_found_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ):
+        from fastapi import HTTPException, status as http_status
+
+        async def _raise(*_a, **_k):
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        monkeypatch.setattr(
+            "server.routers.admin.users_service.delete_user",
+            _raise,
+        )
+        resp = client.delete(
+            "/api/admin/users/0000000000000000000000ff",
+            headers=_headers("superadmin"),
+        )
+        assert resp.status_code == 404

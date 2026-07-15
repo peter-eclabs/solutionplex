@@ -5,7 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.schemas.models import Role, UserResponse, UserRoleUpdate
+from server.schemas.models import CurrentUser, Role, UserResponse, UserRoleUpdate
 from server.security.deps import require_role
 from server.services import users as users_service
 
@@ -73,6 +73,41 @@ async def update_user_role(user_id: str, body: UserRoleUpdate):
         raise
     except Exception as e:
         logger.exception("Failed to update user role")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a user",
+    description=(
+        "Hard-deletes the user account so the email can re-register. "
+        "Superadmin only. Cannot remove own account."
+    ),
+)
+async def delete_user(
+    user_id: str,
+    actor: CurrentUser = Depends(require_role(Role.SUPERADMIN)),
+):
+    """Remove a registered user.
+
+    Args:
+        user_id: Target user ObjectId hex string.
+        actor: Authenticated superadmin performing the delete.
+
+    Raises:
+        HTTPException 400/404: Propagated from the service layer.
+        HTTPException 500: On unexpected server errors.
+    """
+    try:
+        await users_service.delete_user(user_id, actor.id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to delete user")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
