@@ -330,6 +330,25 @@
   background: color-mix(in srgb, var(--accent-problem) 12%, var(--bg-primary));
   border: 1px solid color-mix(in srgb, var(--accent-problem) 42%, transparent);
   border-radius: 999px;
+  transition: transform var(--transition-fast);
+}
+
+/* On list cards the badge sits in the top-right corner, layered above the
+   delete button. Hovering the card (or the badge) slides it left to reveal
+   the delete icon that lives in the same corner. */
+.entity-card .hidden-badge,
+.problem-solution-item .hidden-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 6;
+  margin: 0;
+}
+
+.entity-card:hover .hidden-badge,
+.problem-solution-item:hover .hidden-badge,
+.hidden-badge:hover {
+  transform: translateX(calc(-100% - 0.5rem));
 }
 
 .hidden-badge-icon {
