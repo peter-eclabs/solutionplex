@@ -158,6 +158,16 @@ function AppContent() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  className="search-clear"
+                  onClick={() => setSearchQuery('')}
+                >
+                  ×
+                </button>
+              )}
             </div>
           )}
 
