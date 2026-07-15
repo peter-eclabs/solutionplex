@@ -157,13 +157,14 @@ async def delete_user(user_id: str, actor_id: str) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid user id",
         )
-    if user_id == actor_id:
+    oid = ObjectId(user_id)
+    if user_id == actor_id or (
+        ObjectId.is_valid(actor_id) and oid == ObjectId(actor_id)
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot remove your own account",
         )
-
-    oid = ObjectId(user_id)
     current = await client.users_col.find_one({"_id": oid})
     if current is None:
         raise HTTPException(

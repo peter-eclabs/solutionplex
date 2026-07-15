@@ -224,6 +224,27 @@ class TestDeleteUser:
         mock_col.delete_one.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_delete_user_rejects_self_hex_case(self, monkeypatch):
+        from fastapi import HTTPException
+
+        from server.services import users as users_service
+
+        uid = ObjectId()
+        mock_col = AsyncMock()
+        mock_col.find_one = AsyncMock()
+        mock_col.delete_one = AsyncMock()
+        monkeypatch.setattr(
+            "server.services.users.client.users_col", mock_col
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users_service.delete_user(str(uid).upper(), str(uid).lower())
+        assert exc_info.value.status_code == 400
+        assert "own account" in exc_info.value.detail
+        mock_col.find_one.assert_not_awaited()
+        mock_col.delete_one.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_delete_user_not_found(self, monkeypatch):
         from fastapi import HTTPException
 
