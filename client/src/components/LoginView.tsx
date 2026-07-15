@@ -21,6 +21,12 @@ function friendlyAuthError(err: unknown, isRegister: boolean): string {
   const detail = extractErrorText(err).toLowerCase();
 
   if (
+    detail.includes('not registered') ||
+    detail.includes('register first')
+  ) {
+    return 'Email not found. Please register first.';
+  }
+  if (
     detail.includes('invalid credentials') ||
     detail.includes('could not validate') ||
     detail.includes('unauthorized')

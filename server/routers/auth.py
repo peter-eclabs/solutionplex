@@ -79,7 +79,13 @@ async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]):
     """
     try:
         user = await users_service.get_user_by_email(form.username)
-        if not user or not verify_password(form.password, user["hashed_password"]):
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email not registered. Please register first.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not verify_password(form.password, user["hashed_password"]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
