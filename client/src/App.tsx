@@ -112,12 +112,14 @@ function AppContent() {
   const routeInfo =
     isUnauthorized || isAdminRoute ? null : parseRoute(currentPath);
 
-  // Superadmin-only route: force-nav by non-superadmin → unauthorized
+  // Superadmin-only route: force-nav by non-superadmin → unauthorized.
+  // Wait for auth hydrate — role is null while isLoading, which must not count as deny.
   useEffect(() => {
+    if (isLoading || !user) return;
     if (isAdminRoute && !hasMinRole(role, 'superadmin')) {
       navigate('/unauthorized');
     }
-  }, [isAdminRoute, role, navigate]);
+  }, [isAdminRoute, role, navigate, isLoading, user]);
 
   // Sync active tab with parsed route component so when user returns, they land on correct tab
   useEffect(() => {
