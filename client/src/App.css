@@ -22,15 +22,28 @@
 }
 
 /* Blueprint corner indicators on the header */
-.app-header::before, .app-header::after {
+.app-header::before,
+.app-header::after {
   content: '';
   position: absolute;
   width: 6px;
   height: 6px;
   border: 1px solid var(--accent-cyan);
 }
-.app-header::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
-.app-header::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+.app-header::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.app-header::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
 
 .logo-group {
   display: flex;
@@ -195,6 +208,7 @@
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -202,10 +216,13 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.7;
     filter: drop-shadow(0 0 2px var(--accent-cyan));
   }
+
   50% {
     opacity: 1;
     filter: drop-shadow(0 0 8px var(--accent-cyan));
@@ -246,21 +263,21 @@
 }
 
 .auth-role.role-superadmin {
-  border-color: #f5c542;
-  color: #f5c542;
-  background-color: rgba(245, 197, 66, 0.12);
+  border-color: var(--role-superadmin);
+  color: var(--role-superadmin);
+  background-color: var(--role-superadmin-dim);
 }
 
 .auth-role.role-admin {
-  border-color: #e040fb;
-  color: #e040fb;
-  background-color: rgba(224, 64, 251, 0.12);
+  border-color: var(--role-admin);
+  color: var(--role-admin);
+  background-color: var(--role-admin-dim);
 }
 
 .auth-role.role-reader {
-  border-color: #ff9800;
-  color: #ff9800;
-  background-color: rgba(255, 152, 0, 0.12);
+  border-color: var(--role-reader);
+  color: var(--role-reader);
+  background-color: var(--role-reader-dim);
 }
 
 .auth-logout-btn {
@@ -315,12 +332,14 @@
     grid-template-columns: 1fr;
     row-gap: 0.85rem;
   }
+
   .search-group {
     grid-column: 1;
     max-width: none;
     justify-self: stretch;
     order: 3;
   }
+
   .auth-group {
     grid-column: 1;
     justify-self: stretch;
@@ -336,43 +355,27 @@
 }
 
 .hidden-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex: none;
-  align-self: center;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  line-height: 1;
-  padding: 0.18rem 0.5rem;
-  color: var(--accent-problem);
-  background: color-mix(in srgb, var(--accent-problem) 12%, var(--bg-primary));
-  border: 1px solid color-mix(in srgb, var(--accent-problem) 42%, transparent);
-  border-radius: 999px;
+  color: var(--text-secondary);
   transition: transform var(--transition-fast);
 }
 
 /* On list cards the badge sits in the top-right corner, layered above the
    delete button. Hovering the card (or the badge) slides it left to reveal
    the delete icon that lives in the same corner. */
-.entity-card .hidden-badge,
+/* .entity-card .hidden-badge,
 .problem-solution-item .hidden-badge {
   position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
+  top: 0.7rem;
+  right: 0.7rem;
   z-index: 6;
   margin: 0;
-}
+} */
 
-.entity-card:hover .hidden-badge,
+/* .entity-card:hover .hidden-badge,
 .problem-solution-item:hover .hidden-badge,
 .hidden-badge:hover {
   transform: translateX(-2.1rem);
-}
+} */
 
 .hidden-badge-icon {
   flex: none;
@@ -431,17 +434,17 @@
   border-radius: 50%;
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
   background: var(--accent-problem);
   border-color: var(--accent-problem);
 }
 
-.switch input:checked + .slider::before {
+.switch input:checked+.slider::before {
   transform: translateX(20px);
   background: var(--bg-primary);
 }
 
-.switch input:disabled + .slider {
+.switch input:disabled+.slider {
   opacity: 0.5;
   cursor: not-allowed;
 }

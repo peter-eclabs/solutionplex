@@ -5,7 +5,7 @@ interface CardTitleProps {
   maxChars?: number;
 }
 
-export function CardTitle({ title, maxChars = 20 }: CardTitleProps) {
+export function CardTitle({ title, maxChars = 30 }: CardTitleProps) {
   const ref = useRef<HTMLHeadingElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
