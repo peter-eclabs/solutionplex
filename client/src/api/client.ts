@@ -165,8 +165,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       errorMsg || `API request failed with status ${response.status}`,
     );
   }
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
   try {
-    const data: T = await response.json();
+    const data: T = JSON.parse(text) as T;
     return data;
   } catch {
     throw new Error('Server returned a non-JSON response. Is the API server running?');
@@ -299,5 +308,11 @@ export const adminApi = {
     request<UserResponse>(`/api/admin/users/${userId}`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    }),
+
+  /** Hard-delete a user (superadmin). Email can re-register after. */
+  removeUser: (userId: string) =>
+    request<void>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
     }),
 };
