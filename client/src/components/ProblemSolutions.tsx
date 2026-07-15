@@ -137,8 +137,10 @@ export function ProblemSolutions({
                 className="problem-solution-link"
                 onClick={() => onNavigate(`/solutions/${s.id}`)}
               >
-                <span className="problem-solution-title">{s.title}</span>
-                {s.hidden && <HiddenBadge />}
+                <span className="problem-solution-heading">
+                  <span className="problem-solution-title">{s.title}</span>
+                  {s.hidden && <HiddenBadge />}
+                </span>
                 <span className="problem-solution-created">
                   {formatCreatedOn(s.created_at)}
                 </span>

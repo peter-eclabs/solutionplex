@@ -177,8 +177,10 @@ export function SolutionPrototypes({
                 className="problem-solution-link"
                 onClick={() => onNavigate(`/apps/${app.id}`)}
               >
-                 <span className="problem-solution-title">{app.title}</span>
-                 {app.hidden && <HiddenBadge />}
+                 <span className="problem-solution-heading">
+                   <span className="problem-solution-title">{app.title}</span>
+                   {app.hidden && <HiddenBadge />}
+                 </span>
                 {app.created_at && (
                   <span className="problem-solution-created">
                     {formatCreatedOn(app.created_at)}

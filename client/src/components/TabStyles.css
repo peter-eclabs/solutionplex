@@ -2121,6 +2121,13 @@
   width: 100%;
 }
 
+.problem-solution-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .problem-solution-title {
   font-size: 0.9rem;
   font-weight: 600;

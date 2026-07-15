@@ -313,17 +313,28 @@
 }
 
 .hidden-badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.62rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  align-self: center;
+  white-space: nowrap;
   font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--bg-primary);
-  background: var(--accent-problem);
-  border-radius: 3px;
-  vertical-align: middle;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  padding: 0.18rem 0.5rem;
+  color: var(--accent-problem);
+  background: color-mix(in srgb, var(--accent-problem) 12%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--accent-problem) 42%, transparent);
+  border-radius: 999px;
+}
+
+.hidden-badge-icon {
+  flex: none;
+  display: block;
 }
 
 .hidden-toggle-label {
