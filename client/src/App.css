@@ -348,7 +348,7 @@
 .entity-card:hover .hidden-badge,
 .problem-solution-item:hover .hidden-badge,
 .hidden-badge:hover {
-  transform: translateX(calc(-100% - 0.5rem));
+  transform: translateX(-2.1rem);
 }
 
 .hidden-badge-icon {
