@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "client/package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
       "src": "server/main.py",
@@ -19,12 +22,8 @@
       "handle": "filesystem"
     },
     {
-      "src": "/((?!api|.*\\.).*)",
-      "dest": "client/index.html"
-    },
-    {
       "src": "/(.*)",
-      "dest": "client/$1"
+      "dest": "/index.html"
     }
   ]
 }
