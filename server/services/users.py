@@ -139,3 +139,41 @@ async def update_user_role(user_id: str, role: Role) -> dict[str, Any]:
             detail="User not found",
         )
     return updated
+
+
+async def delete_user(user_id: str, actor_id: str) -> None:
+    """Hard-delete a user account with self-delete protection.
+
+    Args:
+        user_id: Hex string MongoDB ObjectId of the target user.
+        actor_id: Hex string MongoDB ObjectId of the acting superadmin.
+
+    Raises:
+        HTTPException 400: Invalid ObjectId, or attempting to remove self.
+        HTTPException 404: User not found.
+    """
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user id",
+        )
+    if user_id == actor_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove your own account",
+        )
+
+    oid = ObjectId(user_id)
+    current = await client.users_col.find_one({"_id": oid})
+    if current is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    result = await client.users_col.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )

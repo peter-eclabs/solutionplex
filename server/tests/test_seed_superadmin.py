@@ -173,3 +173,89 @@ class TestUpdateUserRole:
                 "000000000000000000000001", Role.ADMIN
             )
         assert exc_info.value.status_code == 404
+
+
+class TestDeleteUser:
+    @pytest.mark.asyncio
+    async def test_delete_user_success(self, monkeypatch):
+        from server.services import users as users_service
+
+        uid = ObjectId()
+        actor = ObjectId()
+        mock_col = AsyncMock()
+        mock_col.find_one = AsyncMock(
+            return_value={
+                "_id": uid,
+                "email": "gone@example.com",
+                "role": "reader",
+                "hashed_password": "x",
+            }
+        )
+        mock_col.delete_one = AsyncMock(
+            return_value=MagicMock(deleted_count=1)
+        )
+        monkeypatch.setattr(
+            "server.services.users.client.users_col", mock_col
+        )
+
+        await users_service.delete_user(str(uid), str(actor))
+
+        mock_col.delete_one.assert_awaited_once_with({"_id": uid})
+
+    @pytest.mark.asyncio
+    async def test_delete_user_rejects_self(self, monkeypatch):
+        from fastapi import HTTPException
+
+        from server.services import users as users_service
+
+        uid = ObjectId()
+        mock_col = AsyncMock()
+        mock_col.find_one = AsyncMock()
+        mock_col.delete_one = AsyncMock()
+        monkeypatch.setattr(
+            "server.services.users.client.users_col", mock_col
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users_service.delete_user(str(uid), str(uid))
+        assert exc_info.value.status_code == 400
+        assert "own account" in exc_info.value.detail
+        mock_col.find_one.assert_not_awaited()
+        mock_col.delete_one.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_delete_user_not_found(self, monkeypatch):
+        from fastapi import HTTPException
+
+        from server.services import users as users_service
+
+        mock_col = AsyncMock()
+        mock_col.find_one = AsyncMock(return_value=None)
+        mock_col.delete_one = AsyncMock()
+        monkeypatch.setattr(
+            "server.services.users.client.users_col", mock_col
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users_service.delete_user(
+                "000000000000000000000001",
+                "000000000000000000000002",
+            )
+        assert exc_info.value.status_code == 404
+        mock_col.delete_one.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_delete_user_invalid_id(self, monkeypatch):
+        from fastapi import HTTPException
+
+        from server.services import users as users_service
+
+        mock_col = AsyncMock()
+        monkeypatch.setattr(
+            "server.services.users.client.users_col", mock_col
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users_service.delete_user("not-an-oid", "000000000000000000000002")
+        assert exc_info.value.status_code == 400
+        assert "Invalid user id" in exc_info.value.detail
